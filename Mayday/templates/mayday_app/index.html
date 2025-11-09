@@ -1,0 +1,143 @@
+{% extends 'mayday_app/base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 操作按钮 -->
+    <div class="mb-4 text-end">
+        <button class="btn btn-scan" onclick="scanMusic()">
+            <i class="bi bi-search"></i> 扫描音乐
+        </button>
+    </div>
+    
+    <!-- 专辑展示 -->
+    <div class="mb-5">
+        <h2 class="mb-4"><i class="bi bi-vinyl"></i> 专辑</h2>
+        <div class="album-grid">
+            {% for album in albums %}
+            <div class="album-card" onclick="location.href='{% url 'album_detail' album.id %}'">
+                {% if album.cover_image %}
+                <img src="{{ album.cover_image.url }}" alt="{{ album.name }}" class="album-cover">
+                {% else %}
+                <div class="album-cover d-flex align-items-center justify-content-center text-white">
+                    <i class="bi bi-music-note-beamed" style="font-size: 4rem;"></i>
+                </div>
+                {% endif %}
+                <div class="album-info">
+                    <h5>{{ album.name }}</h5>
+                    <p class="text-muted mb-1">{{ album.release_date|date:"Y年m月d日" }}</p>
+                    <small class="text-muted">{{ album.songs.count }} 首歌曲</small>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center text-muted">
+                <p>暂无专辑，请先扫描音乐文件</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- 时间线 -->
+    <div class="mb-5">
+        <h2 class="mb-4"><i class="bi bi-clock-history"></i> 时间隧道</h2>
+        <div class="timeline">
+            {% for item in timeline_data %}
+            <div class="timeline-item {{ item.type }}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            {% if item.type == 'album' %}
+                            <i class="bi bi-vinyl-fill text-primary me-2"></i>
+                            {% elif item.type == 'tour' %}
+                            <i class="bi bi-music-player-fill text-warning me-2"></i>
+                            {% elif item.type == 'quote' %}
+                            <i class="bi bi-chat-quote-fill text-success me-2"></i>
+                            {% elif item.type == 'image' %}
+                            <i class="bi bi-image-fill text-danger me-2"></i>
+                            {% endif %}
+                            <h5 class="mb-0">{{ item.title }}</h5>
+                        </div>
+                        <p class="text-muted mb-2">
+                            <i class="bi bi-calendar3"></i> {{ item.date|date:"Y年m月d日" }}
+                        </p>
+                        {% if item.type == 'album' and item.content.cover_image %}
+                        <img src="{{ item.content.cover_image }}" alt="{{ item.title }}" 
+                             class="img-fluid rounded mb-2" style="max-width: 200px;">
+                        {% endif %}
+                        {% if item.type == 'quote' %}
+                        <blockquote class="blockquote">
+                            <p>{{ item.content.text }}</p>
+                            {% if item.content.author %}
+                            <footer class="blockquote-footer">{{ item.content.author }}</footer>
+                            {% endif %}
+                        </blockquote>
+                        {% endif %}
+                        {% if item.type == 'image' and item.content.image_url %}
+                        <img src="{{ item.content.image_url }}" alt="{{ item.title }}" 
+                             class="img-fluid rounded mb-2" style="max-height: 300px;">
+                        {% endif %}
+                        {% if item.content.description %}
+                        <p>{{ item.content.description|truncatewords:30 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center text-muted">
+                <p>时间线为空，请添加内容</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- 最近歌曲 -->
+    <div class="mb-5">
+        <h2 class="mb-4"><i class="bi bi-music-note-list"></i> 歌曲列表</h2>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>歌曲</th>
+                        <th>艺术家</th>
+                        <th>专辑</th>
+                        <th>时长</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for song in songs %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ song.title }}</td>
+                        <td>{{ song.artist }}</td>
+                        <td>{{ song.album.name|default:"-" }}</td>
+                        <td>
+                            {% if song.duration %}
+                            {{ song.duration|floatformat:0 }}秒
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if song.file_path or song.original_path %}
+                            <button class="btn btn-sm btn-primary" 
+                                    onclick="playSong('{% url 'play_song' song.id %}', '{{ song.title }}', '{{ song.artist }}', {{ song.id }})">
+                                <i class="bi bi-play-fill"></i> 播放
+                            </button>
+                            {% else %}
+                            <span class="text-muted">无文件</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">暂无歌曲</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

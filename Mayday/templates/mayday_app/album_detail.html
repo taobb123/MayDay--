@@ -1,0 +1,88 @@
+{% extends 'mayday_app/base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-4">
+            {% if album.cover_image %}
+            <img src="{{ album.cover_image.url }}" alt="{{ album.name }}" 
+                 class="img-fluid rounded shadow">
+            {% else %}
+            <div class="bg-gradient text-white rounded shadow d-flex align-items-center justify-content-center" 
+                 style="height: 400px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <i class="bi bi-vinyl" style="font-size: 6rem;"></i>
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-md-8">
+            <h1>{{ album.name }}</h1>
+            <p class="text-muted">
+                <i class="bi bi-calendar3"></i> 发行日期：{{ album.release_date|date:"Y年m月d日" }}
+            </p>
+            {% if album.description %}
+            <div class="mt-3">
+                <h5>专辑介绍</h5>
+                <p>{{ album.description|linebreaks }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <h3><i class="bi bi-music-note-list"></i> 歌曲列表 ({{ songs.count }}首)</h3>
+        <div class="table-responsive mt-3">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>歌曲</th>
+                        <th>时长</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for song in songs %}
+                    <tr>
+                        <td>{{ song.track_number|default:forloop.counter }}</td>
+                        <td>
+                            <strong>{{ song.title }}</strong>
+                            {% if song.lyrics %}
+                            <br><small class="text-muted">{{ song.lyrics|truncatewords:20 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if song.duration %}
+                            {{ song.duration|floatformat:0 }}秒
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if song.file_path or song.original_path %}
+                            <button class="btn btn-sm btn-primary" 
+                                    onclick="playSong('{% url 'play_song' song.id %}', '{{ song.title }}', '{{ song.artist }}', {{ song.id }})">
+                                <i class="bi bi-play-fill"></i> 播放
+                            </button>
+                            {% else %}
+                            <span class="text-muted">无文件</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">暂无歌曲</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <a href="{% url 'index' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> 返回首页
+        </a>
+    </div>
+</div>
+{% endblock %}
+

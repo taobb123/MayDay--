@@ -1,0 +1,7 @@
+Django>=4.2.0
+djangorestframework>=3.14.0
+kafka-python>=2.0.2
+mutagen>=1.47.0
+Pillow>=10.0.0
+python-dotenv>=1.0.0
+

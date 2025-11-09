@@ -1,0 +1,72 @@
+
+## 启动
+python manage.py runserver
+
+
+## 删除重复记录
+1. 实际删除（带排除列表）预览模式（默认，安全）
+python cleanup_duplicate_songs.py
+只显示将要删除的记录，不会实际删除
+用于查看有哪些重复歌曲
+
+2. 实际删除（带排除列表）
+python cleanup_duplicate_songs.py --delete --exclude 123 456 789
+
+
+
+
+## 脚本功能
+
+`load_lyrics.py` 可以从 `C:\Lyrics` 目录扫描歌词文件并加载到数据库。
+
+### 主要功能
+
+1. 智能匹配：通过文件名匹配数据库中的歌曲
+   - 精确匹配
+   - 包含匹配
+   - 相似度匹配（字符集合相似度）
+
+2. 多格式支持：支持 `.txt`、`.lrc`、`.lyric`、`.lyrics` 等格式
+
+## 使用方法
+
+### 1. 预览模式（默认，安全）
+```bash
+python load_lyrics.py
+```
+- 只显示将要加载的歌词，不会实际更新
+- 用于查看匹配情况
+
+### 2. 实际加载
+```bash
+python load_lyrics.py --load
+```
+- 实际更新数据库中的歌词
+- 不会覆盖已存在的歌词
+
+### 3. 覆盖已有歌词
+```bash
+python load_lyrics.py --load --overwrite
+```
+- **必须同时使用 `--load` 和 `--overwrite` 两个参数**
+- 覆盖数据库中已存在的歌词
+
+### 4. 指定歌词目录
+```bash
+python load_lyrics.py --load --dir "D:\MyLyrics"
+```
+- 指定其他歌词目录路径
+
+
+
+
+## 修改用户
+creat_superuser.py
+
+admin
+admin123
+
+python manage.py createsuperuser
+python create_superuser.py
+
+
