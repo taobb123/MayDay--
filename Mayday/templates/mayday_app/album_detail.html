@@ -46,9 +46,6 @@
                         <td>{{ song.track_number|default:forloop.counter }}</td>
                         <td>
                             <strong>{{ song.title }}</strong>
-                            {% if song.lyrics %}
-                            <br><small class="text-muted">{{ song.lyrics|truncatewords:20 }}</small>
-                            {% endif %}
                         </td>
                         <td>
                             {% if song.duration %}
