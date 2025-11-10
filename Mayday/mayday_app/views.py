@@ -5,9 +5,12 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.generics import ListAPIView
 from django.shortcuts import render, get_object_or_404
 from django.http import FileResponse, Http404
 from django.conf import settings
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import os
 from pathlib import Path
 from .models import Album, Song, Tour, Quote, Image
@@ -18,6 +21,7 @@ from .serializers import (
 from .scanner import MusicScannerProxy, MusicScanner
 from .timeline import TimelineRepository
 from .messaging import message_queue
+from .pagination import AlbumPagination, TimelinePagination, SongPagination
 from datetime import datetime, timedelta
 
 
@@ -25,19 +29,30 @@ class AlbumViewSet(viewsets.ModelViewSet):
     """专辑视图集"""
     queryset = Album.objects.all()
     serializer_class = AlbumSerializer
+    pagination_class = AlbumPagination
 
 
 class SongViewSet(viewsets.ModelViewSet):
     """歌曲视图集"""
     queryset = Song.objects.all()
     serializer_class = SongSerializer
+    pagination_class = SongPagination  # 为列表视图启用分页
     
     @action(detail=False, methods=['get'])
     def by_album(self, request):
-        """根据专辑获取歌曲"""
+        """根据专辑获取歌曲（支持分页）"""
         album_id = request.query_params.get('album_id')
         if album_id:
             songs = Song.objects.filter(album_id=album_id)
+            
+            # 应用分页（在自定义action中需要手动处理）
+            paginator = self.pagination_class()
+            page = paginator.paginate_queryset(songs, request)
+            
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                return paginator.get_paginated_response(serializer.data)
+            
             serializer = self.get_serializer(songs, many=True)
             return Response(serializer.data)
         return Response([])
@@ -160,10 +175,11 @@ class ScanView(APIView):
 
 
 class TimelineView(APIView):
-    """时间线视图"""
+    """时间线视图 - 支持分页"""
+    pagination_class = TimelinePagination
     
     def get(self, request):
-        """获取时间线数据"""
+        """获取时间线数据（支持分页）"""
         timeline_repo = TimelineRepository()
         
         # 获取日期范围参数
@@ -177,9 +193,20 @@ class TimelineView(APIView):
         else:
             items = timeline_repo.get_all_items()
         
-        # 序列化数据
-        serializer = TimelineItemSerializer(items, many=True)
+        # 应用分页（对列表进行分页）
+        paginator = self.pagination_class()
+        # 将列表转换为类似queryset的对象以支持分页
+        # 注意：PageNumberPagination需要queryset，对于列表我们需要手动处理
+        page = paginator.paginate_queryset(items, request)
         
+        if page is not None:
+            # 序列化分页后的数据
+            serializer = TimelineItemSerializer(page, many=True)
+            # 返回分页响应
+            return paginator.get_paginated_response(serializer.data)
+        
+        # 如果没有分页参数，返回所有数据（向后兼容）
+        serializer = TimelineItemSerializer(items, many=True)
         return Response({
             'timeline': serializer.data,
             'count': len(items)
@@ -191,10 +218,38 @@ def index(request):
     timeline_repo = TimelineRepository()
     timeline_data = timeline_repo.get_timeline_data()
     
+    # 应用分页：使用 AlbumPagination 的配置
+    albums_queryset = Album.objects.all().order_by('-release_date')  # 按发布日期倒序
+    albums_paginator = Paginator(albums_queryset, AlbumPagination.page_size)  # 使用 AlbumPagination 的 page_size
+    
+    album_page = request.GET.get('album_page', 1)
+    try:
+        albums = albums_paginator.page(album_page)
+    except PageNotAnInteger:
+        albums = albums_paginator.page(1)
+    except EmptyPage:
+        albums = albums_paginator.page(albums_paginator.num_pages)
+    
+    # 应用分页：使用 SongPagination 的配置
+    songs_queryset = Song.objects.all().order_by('-id')  # 按ID倒序，显示最新歌曲
+    songs_paginator = Paginator(songs_queryset, SongPagination.page_size)  # 使用 SongPagination 的 page_size
+    
+    song_page = request.GET.get('song_page', 1)
+    try:
+        songs = songs_paginator.page(song_page)
+    except PageNotAnInteger:
+        songs = songs_paginator.page(1)
+    except EmptyPage:
+        songs = songs_paginator.page(songs_paginator.num_pages)
+    
+    # 计算歌曲列表的起始索引（用于显示序号）
+    songs_start_index = (songs.number - 1) * songs.paginator.per_page + 1
+    
     context = {
         'timeline_data': timeline_data,
-        'albums': Album.objects.all(),  # 显示所有专辑，不再限制数量
-        'songs': Song.objects.all()[:20],  # 显示前20首歌曲
+        'albums': albums,  # 分页后的专辑对象
+        'songs': songs,  # 分页后的歌曲对象
+        'songs_start_index': songs_start_index,  # 歌曲列表起始索引
     }
     
     return render(request, 'mayday_app/index.html', context)
