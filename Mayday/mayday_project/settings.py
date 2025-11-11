@@ -86,6 +86,11 @@ LANGUAGE_CODE = 'zh-hans'
 TIME_ZONE = 'Asia/Shanghai'
 USE_I18N = True
 USE_TZ = True
+USE_L10N = True
+
+# 编码设置
+DEFAULT_CHARSET = 'utf-8'
+FILE_CHARSET = 'utf-8'
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
@@ -100,7 +105,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Music directory path
-MUSIC_DIRECTORY = r'D:\Music\五月天'
+MUSIC_DIRECTORY = r'D:\Music\方大同'
 
 # Lyrics directory path
 LYRICS_DIRECTORY = r'C:\Lyrics'

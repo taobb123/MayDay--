@@ -27,14 +27,14 @@ from datetime import datetime, timedelta
 
 class AlbumViewSet(viewsets.ModelViewSet):
     """专辑视图集"""
-    queryset = Album.objects.all()
+    queryset = Album.objects.all().prefetch_related('songs')
     serializer_class = AlbumSerializer
     pagination_class = AlbumPagination
 
 
 class SongViewSet(viewsets.ModelViewSet):
     """歌曲视图集"""
-    queryset = Song.objects.all()
+    queryset = Song.objects.all().select_related('album')
     serializer_class = SongSerializer
     pagination_class = SongPagination  # 为列表视图启用分页
     
@@ -43,7 +43,7 @@ class SongViewSet(viewsets.ModelViewSet):
         """根据专辑获取歌曲（支持分页）"""
         album_id = request.query_params.get('album_id')
         if album_id:
-            songs = Song.objects.filter(album_id=album_id)
+            songs = Song.objects.filter(album_id=album_id).select_related('album')
             
             # 应用分页（在自定义action中需要手动处理）
             paginator = self.pagination_class()
@@ -219,7 +219,7 @@ def index(request):
     timeline_data = timeline_repo.get_timeline_data()
     
     # 应用分页：使用 AlbumPagination 的配置
-    albums_queryset = Album.objects.all().order_by('-release_date')  # 按发布日期倒序
+    albums_queryset = Album.objects.all().order_by('-release_date').prefetch_related('songs')  # 按发布日期倒序，预加载歌曲
     albums_paginator = Paginator(albums_queryset, AlbumPagination.page_size)  # 使用 AlbumPagination 的 page_size
     
     album_page = request.GET.get('album_page', 1)
@@ -231,7 +231,7 @@ def index(request):
         albums = albums_paginator.page(albums_paginator.num_pages)
     
     # 应用分页：使用 SongPagination 的配置
-    songs_queryset = Song.objects.all().order_by('-id')  # 按ID倒序，显示最新歌曲
+    songs_queryset = Song.objects.all().order_by('-id').select_related('album')  # 按ID倒序，显示最新歌曲，预加载专辑
     songs_paginator = Paginator(songs_queryset, SongPagination.page_size)  # 使用 SongPagination 的 page_size
     
     song_page = request.GET.get('song_page', 1)

@@ -23,12 +23,18 @@ class SongSerializer(serializers.ModelSerializer):
 class AlbumSerializer(serializers.ModelSerializer):
     """专辑序列化器"""
     songs = SongSerializer(many=True, read_only=True)
-    song_count = serializers.IntegerField(source='songs.count', read_only=True)
+    song_count = serializers.SerializerMethodField()
     
     class Meta:
         model = Album
         fields = ['id', 'name', 'release_date', 'cover_image', 'description', 
                   'songs', 'song_count', 'created_at']
+    
+    def get_song_count(self, obj):
+        """获取歌曲数量，使用预加载的数据"""
+        if hasattr(obj, '_prefetched_objects_cache') and 'songs' in obj._prefetched_objects_cache:
+            return len(obj._prefetched_objects_cache['songs'])
+        return obj.songs.count()
 
 
 class TourVenueSerializer(serializers.ModelSerializer):

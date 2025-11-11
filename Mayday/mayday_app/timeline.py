@@ -38,23 +38,29 @@ class TimelineRepository(TimelineRepositoryInterface):
                 pass
     
     def get_items_by_date_range(self, start_date: datetime, end_date: datetime) -> List[Any]:
-        """根据日期范围获取项目 - 组合所有类型"""
+        """根据日期范围获取项目 - 组合所有类型（优化查询）"""
         items: List[Any] = []
         
-        # 组合查询所有类型
-        albums = Album.objects.filter(release_date__range=[start_date.date(), end_date.date()])
+        # 组合查询所有类型，只加载需要的字段
+        albums = Album.objects.filter(
+            release_date__range=[start_date.date(), end_date.date()]
+        ).only('id', 'name', 'release_date', 'cover_image', 'description')
         items.extend(list(albums))
         
         tours = Tour.objects.filter(
             Q(start_date__lte=end_date.date()) & 
             (Q(end_date__gte=start_date.date()) | Q(end_date__isnull=True))
-        )
+        ).only('id', 'name', 'start_date', 'end_date', 'description')
         items.extend(list(tours))
         
-        quotes = Quote.objects.filter(date__range=[start_date.date(), end_date.date()])
+        quotes = Quote.objects.filter(
+            date__range=[start_date.date(), end_date.date()]
+        ).only('id', 'text', 'author', 'source', 'date')
         items.extend(list(quotes))
         
-        images = Image.objects.filter(date__range=[start_date.date(), end_date.date()])
+        images = Image.objects.filter(
+            date__range=[start_date.date(), end_date.date()]
+        ).only('id', 'title', 'image', 'caption', 'date')
         items.extend(list(images))
         
         # 按日期排序
@@ -63,13 +69,21 @@ class TimelineRepository(TimelineRepositoryInterface):
         return items
     
     def get_all_items(self) -> List[Any]:
-        """获取所有项目 - 组合所有类型"""
+        """获取所有项目 - 组合所有类型（优化查询）"""
         items: List[Any] = []
         
-        items.extend(list(Album.objects.all()))
-        items.extend(list(Tour.objects.all()))
-        items.extend(list(Quote.objects.all()))
-        items.extend(list(Image.objects.all()))
+        # 使用iterator()减少内存占用，只加载需要的字段
+        albums = Album.objects.all().only('id', 'name', 'release_date', 'cover_image', 'description')
+        items.extend(list(albums))
+        
+        tours = Tour.objects.all().only('id', 'name', 'start_date', 'end_date', 'description')
+        items.extend(list(tours))
+        
+        quotes = Quote.objects.all().only('id', 'text', 'author', 'source', 'date')
+        items.extend(list(quotes))
+        
+        images = Image.objects.all().only('id', 'title', 'image', 'caption', 'date')
+        items.extend(list(images))
         
         # 按日期排序
         items.sort(key=lambda x: x.get_date(), reverse=True)

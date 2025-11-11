@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>样式检测工具</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .check-result {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #4a90e2;
+        }
+        .check-result.success {
+            border-left-color: #50c878;
+        }
+        .check-result.error {
+            border-left-color: #e74c3c;
+        }
+        .check-result.warning {
+            border-left-color: #f5a623;
+        }
+        .check-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .check-details {
+            font-size: 14px;
+            color: #666;
+            margin-left: 20px;
+        }
+        code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>播放列表样式检测工具</h1>
+    <button onclick="runStyleCheck()" style="padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px;">
+        开始检测
+    </button>
+    <div id="results"></div>
+
+    <script>
+        function runStyleCheck() {
+            const results = [];
+            
+            // 1. 检查Bootstrap CSS
+            const bootstrapLink = document.querySelector('link[href*="bootstrap"][rel="stylesheet"]:not([href*="icons"])');
+            if (bootstrapLink) {
+                results.push({
+                    type: 'success',
+                    title: '✅ Bootstrap CSS 已加载',
+                    details: `来源: ${bootstrapLink.href}`
+                });
+            } else {
+                results.push({
+                    type: 'error',
+                    title: '❌ Bootstrap CSS 未找到',
+                    details: '请检查CDN链接是否正确'
+                });
+            }
+            
+            // 2. 检查Bootstrap Icons
+            const iconsLink = document.querySelector('link[href*="bootstrap-icons"]');
+            if (iconsLink) {
+                results.push({
+                    type: 'success',
+                    title: '✅ Bootstrap Icons 已加载',
+                    details: `来源: ${iconsLink.href}`
+                });
+            } else {
+                results.push({
+                    type: 'error',
+                    title: '❌ Bootstrap Icons 未找到',
+                    details: '图标可能无法显示'
+                });
+            }
+            
+            // 3. 检查表格样式
+            const table = document.querySelector('.table');
+            if (table) {
+                const styles = window.getComputedStyle(table);
+                const hasBootstrapStyle = styles.borderCollapse === 'collapse' || styles.borderCollapse === 'separate';
+                results.push({
+                    type: hasBootstrapStyle ? 'success' : 'warning',
+                    title: hasBootstrapStyle ? '✅ 表格元素存在且样式正常' : '⚠️ 表格元素存在但样式可能异常',
+                    details: `字体大小: ${styles.fontSize}, 显示方式: ${styles.display}, 边框: ${styles.borderCollapse}`
+                });
+            } else {
+                results.push({
+                    type: 'error',
+                    title: '❌ 表格元素未找到',
+                    details: '请检查页面是否包含 .table 元素'
+                });
+            }
+            
+            // 4. 检查播放按钮样式
+            const playButton = document.querySelector('.btn-primary');
+            if (playButton) {
+                const styles = window.getComputedStyle(playButton);
+                const hasBootstrapStyle = styles.backgroundColor !== 'rgba(0, 0, 0, 0)' && 
+                                         styles.borderRadius !== '0px';
+                results.push({
+                    type: hasBootstrapStyle ? 'success' : 'warning',
+                    title: hasBootstrapStyle ? '✅ 播放按钮样式正常' : '⚠️ 播放按钮样式可能异常',
+                    details: `背景色: ${styles.backgroundColor}, 内边距: ${styles.padding}, 圆角: ${styles.borderRadius}`
+                });
+            } else {
+                results.push({
+                    type: 'warning',
+                    title: '⚠️ 播放按钮未找到',
+                    details: '可能页面中没有播放按钮，或使用了不同的类名'
+                });
+            }
+            
+            // 5. 检查播放器元素
+            const player = document.getElementById('musicPlayer');
+            if (player) {
+                const styles = window.getComputedStyle(player);
+                results.push({
+                    type: 'success',
+                    title: '✅ 播放器元素存在',
+                    details: `显示状态: ${styles.display}, 定位: ${styles.position}, 底部: ${styles.bottom}, 激活状态: ${player.classList.contains('active') ? '是' : '否'}`
+                });
+            } else {
+                results.push({
+                    type: 'error',
+                    title: '❌ 播放器元素未找到',
+                    details: '请检查 base.html 中是否包含 #musicPlayer 元素'
+                });
+            }
+            
+            // 6. 检查播放器工具栏
+            const toolbar = document.querySelector('.player-toolbar');
+            if (toolbar) {
+                const styles = window.getComputedStyle(toolbar);
+                results.push({
+                    type: 'success',
+                    title: '✅ 播放器工具栏存在',
+                    details: `背景色: ${styles.backgroundColor}, 内边距: ${styles.padding}`
+                });
+            } else {
+                results.push({
+                    type: 'error',
+                    title: '❌ 播放器工具栏未找到',
+                    details: '请检查 .player-toolbar 元素是否存在'
+                });
+            }
+            
+            // 7. 检查播放器按钮样式
+            const playerBtn = document.querySelector('.player-btn');
+            if (playerBtn) {
+                const styles = window.getComputedStyle(playerBtn);
+                results.push({
+                    type: 'success',
+                    title: '✅ 播放器按钮样式存在',
+                    details: `背景色: ${styles.backgroundColor}, 颜色: ${styles.color}, 内边距: ${styles.padding}`
+                });
+            } else {
+                results.push({
+                    type: 'warning',
+                    title: '⚠️ 播放器按钮未找到',
+                    details: '可能播放器未激活，或按钮使用了不同的类名'
+                });
+            }
+            
+            // 8. 检查自定义样式
+            const styleTag = document.querySelector('style');
+            if (styleTag && styleTag.textContent.includes('.music-player')) {
+                results.push({
+                    type: 'success',
+                    title: '✅ 自定义样式已加载',
+                    details: '内联样式标签包含播放器样式定义'
+                });
+            } else {
+                results.push({
+                    type: 'error',
+                    title: '❌ 自定义样式未找到',
+                    details: '请检查 base.html 中是否包含 <style> 标签'
+                });
+            }
+            
+            // 显示结果
+            displayResults(results);
+        }
+        
+        function displayResults(results) {
+            const container = document.getElementById('results');
+            container.innerHTML = '';
+            
+            results.forEach(result => {
+                const div = document.createElement('div');
+                div.className = `check-result ${result.type}`;
+                div.innerHTML = `
+                    <div class="check-title">${result.title}</div>
+                    <div class="check-details">${result.details}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        // 页面加载时自动运行检测
+        window.addEventListener('load', function() {
+            setTimeout(runStyleCheck, 500);
+        });
+    </script>
+</body>
+</html>
+

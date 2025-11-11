@@ -12,7 +12,15 @@ class AlbumAdmin(admin.ModelAdmin):
     search_fields = ['name', 'description']
     date_hierarchy = 'release_date'
     
+    def get_queryset(self, request):
+        """优化查询，预加载歌曲"""
+        qs = super().get_queryset(request)
+        return qs.prefetch_related('songs')
+    
     def song_count(self, obj):
+        """获取歌曲数量，使用预加载的数据"""
+        if hasattr(obj, '_prefetched_objects_cache') and 'songs' in obj._prefetched_objects_cache:
+            return len(obj._prefetched_objects_cache['songs'])
         return obj.songs.count()
     song_count.short_description = '歌曲数量'
 
@@ -23,6 +31,11 @@ class SongAdmin(admin.ModelAdmin):
     list_filter = ['album', 'artist']
     search_fields = ['title', 'artist']
     ordering = ['album', 'track_number']
+    
+    def get_queryset(self, request):
+        """优化查询，预加载专辑"""
+        qs = super().get_queryset(request)
+        return qs.select_related('album')
 
 
 @admin.register(Tour)

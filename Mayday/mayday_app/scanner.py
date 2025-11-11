@@ -74,8 +74,14 @@ class MusicScanner(MusicScannerInterface):
             
             return metadata
         except (ID3NoHeaderError, Exception) as e:
-            print(f"Error extracting metadata from {file_path}: {e}")
-            # 返回基本元数据
+            # 记录错误但不中断扫描（使用警告级别，因为这不是严重错误）
+            error_msg = str(e)
+            if 'sync' in error_msg.lower() or 'mpeg' in error_msg.lower():
+                print(f"⚠️ 无法提取元数据（文件格式可能不标准）: {Path(file_path).name}")
+            else:
+                print(f"⚠️ 元数据提取失败: {Path(file_path).name} - {error_msg}")
+            
+            # 返回基本元数据，确保文件仍然可以被添加到数据库
             return {
                 'title': Path(file_path).stem,
                 'artist': '五月天',
