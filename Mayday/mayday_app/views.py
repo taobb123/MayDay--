@@ -14,7 +14,8 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, JsonResponse
+import json
 from django.conf import settings
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import os
@@ -578,6 +579,136 @@ def playlist_list_view(request):
     return render(request, 'mayday_app/playlist_list.html', {
         'playlists': playlists
     })
+
+
+@login_required
+def create_playlist_api(request):
+    """创建歌单API - 使用JsonResponse确保返回JSON"""
+    # 调试信息
+    print(f"create_playlist_api called - Method: {request.method}, User: {request.user}, Authenticated: {request.user.is_authenticated}")
+    
+    if request.method != 'POST':
+        print(f"Method not allowed: {request.method}")
+        return JsonResponse({'error': f'只支持POST请求，收到: {request.method}'}, status=405)
+    
+    try:
+        # 解析JSON请求体
+        if request.content_type and 'application/json' in request.content_type:
+            try:
+                data = json.loads(request.body.decode('utf-8'))
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                return JsonResponse({'error': f'无效的JSON数据: {str(e)}'}, status=400)
+        else:
+            # 兼容form-data格式
+            data = request.POST
+        
+        name = data.get('name', '').strip()
+        description = data.get('description', '').strip()
+        
+        # 验证歌单名称
+        if not name:
+            return JsonResponse({'error': '歌单名称不能为空'}, status=400)
+        
+        if len(name) > 200:
+            return JsonResponse({'error': '歌单名称不能超过200个字符'}, status=400)
+        
+        # 检查是否已存在同名歌单
+        if Playlist.objects.filter(user=request.user, name=name).exists():
+            return JsonResponse({'error': '歌单名称已存在'}, status=400)
+        
+        # 创建歌单
+        playlist = Playlist.objects.create(
+            user=request.user,
+            name=name,
+        )
+        
+        return JsonResponse({
+            'message': '歌单创建成功',
+            'playlist': {
+                'id': playlist.id,
+                'name': playlist.name,
+                'song_count': 0,
+                'created_at': playlist.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            }
+        }, status=201)
+        
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"创建歌单错误: {error_detail}")
+        return JsonResponse({'error': f'创建失败: {str(e)}'}, status=500)
+
+
+@login_required
+def update_playlist_api(request, playlist_id):
+    """更新歌单API - 使用JsonResponse确保返回JSON"""
+    if request.method not in ['PUT', 'PATCH']:
+        return JsonResponse({'error': '只支持PUT/PATCH请求'}, status=405)
+    
+    try:
+        playlist = Playlist.objects.get(id=playlist_id, user=request.user)
+    except Playlist.DoesNotExist:
+        return JsonResponse({'error': '歌单不存在'}, status=404)
+    
+    try:
+        # 解析JSON请求体
+        if request.content_type and 'application/json' in request.content_type:
+            try:
+                data = json.loads(request.body.decode('utf-8'))
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                return JsonResponse({'error': f'无效的JSON数据: {str(e)}'}, status=400)
+        else:
+            data = request.POST
+        
+        name = data.get('name', '').strip()
+        
+        # 验证歌单名称
+        if not name:
+            return JsonResponse({'error': '歌单名称不能为空'}, status=400)
+        
+        if len(name) > 200:
+            return JsonResponse({'error': '歌单名称不能超过200个字符'}, status=400)
+        
+        # 检查是否与其他歌单重名
+        if Playlist.objects.filter(user=request.user, name=name).exclude(id=playlist_id).exists():
+            return JsonResponse({'error': '歌单名称已存在'}, status=400)
+        
+        # 更新歌单
+        playlist.name = name
+        playlist.save()
+        
+        return JsonResponse({
+            'message': '歌单更新成功',
+            'playlist': {
+                'id': playlist.id,
+                'name': playlist.name,
+                'song_count': playlist.get_song_count(),
+                'updated_at': playlist.updated_at.strftime('%Y-%m-%d %H:%M:%S')
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"更新歌单错误: {error_detail}")
+        return JsonResponse({'error': f'更新失败: {str(e)}'}, status=500)
+
+
+@login_required
+def delete_playlist_api(request, playlist_id):
+    """删除歌单API - 使用JsonResponse确保返回JSON"""
+    if request.method != 'DELETE':
+        return JsonResponse({'error': '只支持DELETE请求'}, status=405)
+    
+    try:
+        playlist = Playlist.objects.get(id=playlist_id, user=request.user)
+        playlist_name = playlist.name
+        playlist.delete()
+        return JsonResponse({'message': f'歌单"{playlist_name}"已删除'})
+    except Playlist.DoesNotExist:
+        return JsonResponse({'error': '歌单不存在'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': f'删除失败: {str(e)}'}, status=500)
 
 
 @login_required

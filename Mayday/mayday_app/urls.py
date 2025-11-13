@@ -14,6 +14,11 @@ router.register(r'images', views.ImageViewSet)
 router.register(r'playlists', views.PlaylistViewSet)
 
 urlpatterns = [
+    # 歌单API路由（使用JsonResponse确保返回JSON）- 必须在router之前，避免路由冲突
+    path('api/playlists/create/', views.create_playlist_api, name='create_playlist_api'),
+    path('api/playlists/<int:playlist_id>/update/', views.update_playlist_api, name='update_playlist_api'),
+    path('api/playlists/<int:playlist_id>/delete/', views.delete_playlist_api, name='delete_playlist_api'),
+    
     # API路由
     path('api/', include(router.urls)),
     path('api/scan/', views.ScanView.as_view(), name='scan'),

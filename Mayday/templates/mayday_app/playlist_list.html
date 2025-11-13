@@ -6,9 +6,14 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="bi bi-music-note-list"></i> 我的歌单</h2>
-        <button class="btn btn-primary" onclick="showCreatePlaylistModal()">
-            <i class="bi bi-plus-circle"></i> 创建歌单
-        </button>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-primary" onclick="showCreatePlaylistModal()">
+                <i class="bi bi-plus-circle"></i> 创建歌单
+            </button>
+            <button class="btn btn-outline-secondary" onclick="location.href='{% url 'index' %}'" title="关闭">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
     </div>
     
     {% if playlists %}
@@ -32,6 +37,9 @@
                         <a href="{% url 'playlist_detail' playlist.id %}" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-eye"></i> 查看
                         </a>
+                        <button class="btn btn-sm btn-success" onclick="showAddSongModal({{ playlist.id }}, '{{ playlist.name }}')">
+                            <i class="bi bi-plus-circle"></i> 添加歌曲
+                        </button>
                         <button class="btn btn-sm btn-outline-secondary" onclick="editPlaylist({{ playlist.id }}, '{{ playlist.name }}')">
                             <i class="bi bi-pencil"></i> 编辑
                         </button>
@@ -55,6 +63,32 @@
     {% endif %}
 </div>
 
+<!-- 添加歌曲模态框 -->
+<div class="modal fade" id="addSongModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addSongModalTitle">添加歌曲</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="songSearchInput" class="form-label">搜索歌曲</label>
+                    <input type="text" class="form-control" id="songSearchInput" placeholder="输入歌曲名称或艺术家名称...">
+                    <small class="text-muted">至少输入2个字符开始搜索</small>
+                </div>
+                <div id="songSearchResults" style="max-height: 400px; overflow-y: auto;">
+                    <p class="text-muted text-center">请输入关键词搜索歌曲</p>
+                </div>
+                <input type="hidden" id="currentPlaylistId">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 创建/编辑歌单模态框 -->
 <div class="modal fade" id="playlistModal" tabindex="-1">
     <div class="modal-dialog">
@@ -65,6 +99,7 @@
             </div>
             <div class="modal-body">
                 <form id="playlistForm">
+                    {% csrf_token %}
                     <div class="mb-3">
                         <label for="playlistName" class="form-label">歌单名称</label>
                         <input type="text" class="form-control" id="playlistName" required>
@@ -114,7 +149,8 @@ function savePlaylist() {
         return;
     }
     
-    const url = id ? `/api/playlists/${id}/` : '/api/playlists/';
+    // 使用新的API端点，确保返回JSON
+    const url = id ? `/api/playlists/${id}/update/` : '/api/playlists/create/';
     const method = id ? 'PUT' : 'POST';
     const data = { name: name };
     
@@ -135,26 +171,21 @@ function savePlaylist() {
         body: JSON.stringify(data)
     })
     .then(async response => {
-        // 先获取响应文本，以便检查是否是JSON
+        // 先获取响应文本
         const text = await response.text();
         
         // 检查响应类型
         const contentType = response.headers.get('content-type') || '';
         const isJson = contentType.includes('application/json');
         
-        // 如果不是JSON响应
         if (!isJson) {
-            if (response.status === 403 || response.status === 401) {
-                if (confirm('您可能未登录或会话已过期，是否前往登录页面？')) {
-                    window.location.href = '/login/';
-                }
+            console.error('非JSON响应:', text.substring(0, 500));
+            if (response.status === 403) {
+                throw new Error('CSRF验证失败，请刷新页面后重试');
+            } else if (response.status === 401) {
                 throw new Error('请先登录');
-            } else if (response.status === 404) {
-                throw new Error('请求的资源不存在');
             } else {
-                // 尝试从HTML中提取错误信息
-                console.error('服务器返回HTML响应:', text.substring(0, 200));
-                throw new Error('服务器返回了非JSON响应，状态码: ' + response.status);
+                throw new Error(`服务器返回了非JSON响应 (状态码: ${response.status})`);
             }
         }
         
@@ -163,27 +194,19 @@ function savePlaylist() {
         try {
             jsonData = JSON.parse(text);
         } catch (e) {
-            console.error('JSON解析失败:', text.substring(0, 200));
+            console.error('JSON解析失败:', text.substring(0, 500));
             throw new Error('服务器响应格式错误');
         }
         
         if (!response.ok) {
-            // 处理验证错误
-            let errorMsg = '操作失败';
-            if (jsonData.name && Array.isArray(jsonData.name)) {
-                errorMsg = jsonData.name[0];
-            } else if (jsonData.detail) {
-                errorMsg = jsonData.detail;
-            } else if (jsonData.error) {
-                errorMsg = jsonData.error;
-            } else if (jsonData.non_field_errors && Array.isArray(jsonData.non_field_errors)) {
-                errorMsg = jsonData.non_field_errors[0];
-            }
+            // 处理错误
+            const errorMsg = jsonData.error || jsonData.message || `操作失败 (状态码: ${response.status})`;
             throw new Error(errorMsg);
         }
         return jsonData;
     })
     .then(data => {
+        // 静默处理，不显示成功消息
         // 关闭模态框
         const modal = bootstrap.Modal.getInstance(document.getElementById('playlistModal'));
         if (modal) {
@@ -193,6 +216,7 @@ function savePlaylist() {
     })
     .catch(error => {
         console.error('Error:', error);
+        console.error('Error stack:', error.stack);
         let errorMsg = '操作失败';
         if (error.message) {
             errorMsg = error.message;
@@ -206,23 +230,184 @@ function deletePlaylist(id, name) {
         return;
     }
     
-    fetch(`/api/playlists/${id}/`, {
+    fetch(`/api/playlists/${id}/delete/`, {
         method: 'DELETE',
         headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
             'X-CSRFToken': getCookie('csrftoken')
-        }
+        },
+        credentials: 'same-origin'
     })
-    .then(response => {
+    .then(async response => {
+        // 确保响应是JSON
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            throw new Error('服务器返回了非JSON响应');
+        }
+        
+        const jsonData = await response.json();
+        
         if (response.ok) {
             location.reload();
         } else {
-            alert('删除失败');
+            alert(jsonData.error || '删除失败');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('删除失败');
+        alert(error.message || '删除失败');
     });
+}
+
+let songSearchTimeout = null;
+
+function showAddSongModal(playlistId, playlistName) {
+    document.getElementById('addSongModalTitle').textContent = `添加歌曲到"${playlistName}"`;
+    document.getElementById('currentPlaylistId').value = playlistId;
+    document.getElementById('songSearchInput').value = '';
+    document.getElementById('songSearchResults').innerHTML = '<p class="text-muted text-center">请输入关键词搜索歌曲</p>';
+    const modal = new bootstrap.Modal(document.getElementById('addSongModal'));
+    modal.show();
+    
+    // 聚焦搜索框
+    setTimeout(() => {
+        const searchInput = document.getElementById('songSearchInput');
+        if (searchInput) {
+            searchInput.focus();
+        }
+    }, 300);
+}
+
+// 初始化搜索功能 - 使用事件委托，确保在模态框显示后也能工作
+document.addEventListener('DOMContentLoaded', function() {
+    // 使用事件委托，监听整个文档
+    document.addEventListener('input', function(e) {
+        if (e.target && e.target.id === 'songSearchInput') {
+            const query = e.target.value.trim();
+            
+            clearTimeout(songSearchTimeout);
+            
+            if (query.length < 2) {
+                document.getElementById('songSearchResults').innerHTML = '<p class="text-muted text-center">请输入至少2个字符</p>';
+                return;
+            }
+            
+            songSearchTimeout = setTimeout(() => {
+                performSongSearch(query);
+            }, 500);
+        }
+    });
+    
+    // 回车搜索
+    document.addEventListener('keypress', function(e) {
+        if (e.target && e.target.id === 'songSearchInput' && e.key === 'Enter') {
+            e.preventDefault();
+            const query = e.target.value.trim();
+            if (query.length >= 2) {
+                clearTimeout(songSearchTimeout);
+                performSongSearch(query);
+            }
+        }
+    });
+});
+
+function performSongSearch(query) {
+    const resultsDiv = document.getElementById('songSearchResults');
+    resultsDiv.innerHTML = '<p class="text-muted text-center"><i class="bi bi-hourglass-split"></i> 搜索中...</p>';
+    
+    fetch(`/api/search/?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.results && data.results.length > 0) {
+                let html = '<table class="table table-hover table-sm">';
+                html += '<thead><tr><th>歌曲</th><th>艺术家</th><th>专辑</th><th>操作</th></tr></thead>';
+                html += '<tbody>';
+                
+                data.results.forEach(song => {
+                    html += '<tr>';
+                    html += `<td>${escapeHtml(song.title || '-')}</td>`;
+                    html += `<td>${escapeHtml(song.artist || '-')}</td>`;
+                    html += `<td>${escapeHtml(song.album?.name || '-')}</td>`;
+                    html += '<td>';
+                    html += `<button class="btn btn-sm btn-primary" onclick="addSongToPlaylist(${song.id}, '${escapeHtml(song.title)}')">`;
+                    html += '<i class="bi bi-plus-circle"></i> 添加';
+                    html += '</button>';
+                    html += '</td>';
+                    html += '</tr>';
+                });
+                
+                html += '</tbody></table>';
+                resultsDiv.innerHTML = html;
+            } else {
+                resultsDiv.innerHTML = '<p class="text-muted text-center">未找到相关歌曲</p>';
+            }
+        })
+        .catch(error => {
+            console.error('搜索错误:', error);
+            resultsDiv.innerHTML = '<p class="text-danger text-center">搜索失败，请重试</p>';
+        });
+}
+
+function addSongToPlaylist(songId, songTitle) {
+    const playlistId = document.getElementById('currentPlaylistId').value;
+    
+    if (!playlistId) {
+        alert('歌单ID未找到');
+        return;
+    }
+    
+    const csrfToken = getCookie('csrftoken');
+    if (!csrfToken) {
+        alert('CSRF token未找到，请刷新页面后重试');
+        return;
+    }
+    
+    fetch(`/api/playlists/${playlistId}/add_song/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ song_id: songId })
+    })
+    .then(async response => {
+        const text = await response.text();
+        const contentType = response.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+        
+        if (!isJson) {
+            throw new Error('服务器返回了非JSON响应');
+        }
+        
+        const jsonData = JSON.parse(text);
+        
+        if (!response.ok) {
+            throw new Error(jsonData.error || '添加失败');
+        }
+        
+        return jsonData;
+    })
+    .then(data => {
+        // 显示成功消息（songTitle已经通过escapeHtml转义，但alert中需要再次处理）
+        const safeTitle = songTitle.replace(/'/g, "\\'").replace(/"/g, '\\"');
+        alert(`"${safeTitle}" 已添加到歌单`);
+        // 刷新页面
+        location.reload();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.message || '添加失败');
+    });
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function getCookie(name) {
@@ -235,6 +420,13 @@ function getCookie(name) {
                 cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                 break;
             }
+        }
+    }
+    // 如果cookie中没有，尝试从隐藏的csrf token input中获取
+    if (!cookieValue && name === 'csrftoken') {
+        const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfInput) {
+            cookieValue = csrfInput.value;
         }
     }
     return cookieValue;
