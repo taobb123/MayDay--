@@ -1109,9 +1109,17 @@
                     updateShuffledPlaylist();
                 } catch (error) {
                     console.error('获取播放列表失败:', error);
-                    const errorMsg = error.message || '未知错误';
-                    showError('获取播放列表失败: ' + errorMsg);
-                    throw error;  // 重新抛出错误，让调用者知道失败
+                    // 如果是401或403错误，可能是未登录，静默处理
+                    if (error.message && (error.message.includes('401') || error.message.includes('403'))) {
+                        console.log('未登录用户，跳过API获取播放列表，将从页面按钮获取');
+                        // 不抛出错误，继续使用从页面获取的列表
+                    } else {
+                        // 其他错误才显示提示
+                        const errorMsg = error.message || '未知错误';
+                        console.warn('获取播放列表失败: ' + errorMsg);
+                        // 不显示错误提示，避免干扰用户
+                    }
+                    // 不抛出错误，让初始化继续完成
                 }
             } else {
                 updateShuffledPlaylist();
@@ -1883,7 +1891,10 @@
                 console.log('播放列表初始化完成');
             } catch (error) {
                 console.error('播放列表初始化失败:', error);
-                showError('播放列表初始化失败，请刷新页面重试');
+                // 只在严重错误时显示提示，避免干扰用户
+                if (error.message && !error.message.includes('401') && !error.message.includes('403')) {
+                    showError('播放列表初始化失败，请刷新页面重试');
+                }
             }
             
             // 尝试恢复播放器状态

@@ -13,6 +13,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_protect
 from django.db.models import Q
 from django.http import FileResponse, Http404, JsonResponse
 import json
@@ -65,6 +66,7 @@ class SongViewSet(viewsets.ModelViewSet):
     queryset = Song.objects.all().select_related('album')
     serializer_class = SongSerializer
     pagination_class = SongPagination  # 为列表视图启用分页
+    permission_classes = [AllowAny]  # 允许未登录用户访问歌曲列表
     
     @action(detail=False, methods=['get'])
     def by_album(self, request):
@@ -652,6 +654,7 @@ class PlaylistViewSet(viewsets.ModelViewSet):
 
 
 # 用户认证视图
+@csrf_protect
 def login_view(request):
     """登录视图"""
     if request.user.is_authenticated:
@@ -673,6 +676,7 @@ def login_view(request):
     return render(request, 'mayday_app/login.html')
 
 
+@csrf_protect
 def register_view(request):
     """注册视图"""
     if request.user.is_authenticated:
