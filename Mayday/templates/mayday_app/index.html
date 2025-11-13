@@ -32,6 +32,32 @@
             </div>
             {% endif %}
         </div>
+        
+        <!-- 选择歌单模态框 -->
+        {% if user.is_authenticated %}
+        <div class="modal fade" id="selectPlaylistModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">选择歌单</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="playlistList" style="max-height: 400px; overflow-y: auto;">
+                            <p class="text-muted text-center">加载中...</p>
+                        </div>
+                        <input type="hidden" id="currentSongIdForPlaylist">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <a href="{% url 'playlist_list' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> 创建新歌单
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
         <div>
             <button class="btn btn-scan" onclick="scanMusic()">
                 <i class="bi bi-folder2-open"></i> 扫描音乐
@@ -204,22 +230,10 @@
                                     <i class="bi bi-play-fill"></i> 播放
                                 </button>
                                 {% endif %}
-                                <button class="btn btn-sm btn-outline-info add-temp-list-btn" 
-                                        data-song-id="{{ song.id }}"
-                                        data-song-title="{{ song.title|escapejs }}"
-                                        data-song-artist="{{ song.artist|escapejs }}"
-                                        data-play-url="{% url 'play_song' song.id %}">
-                                    <i class="bi bi-plus-circle"></i> 临时列表
-                                </button>
                                 {% if user.is_authenticated %}
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                                        <i class="bi bi-list-ul"></i> 歌单
-                                    </button>
-                                    <ul class="dropdown-menu playlist-menu" data-song-id="{{ song.id }}">
-                                        <li><a class="dropdown-item add-to-playlist-btn" href="#">选择歌单...</a></li>
-                                    </ul>
-                                </div>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="showPlaylistModal({{ song.id }})" type="button">
+                                    <i class="bi bi-list-ul"></i> 歌单
+                                </button>
                                 {% endif %}
                             </div>
                         </td>
@@ -297,22 +311,6 @@ document.addEventListener('click', function(e) {
         playSong(playUrl, title, artist, songId);
     }
     
-    if (e.target.closest('.add-temp-list-btn')) {
-        const btn = e.target.closest('.add-temp-list-btn');
-        const songId = parseInt(btn.dataset.songId);
-        const title = btn.dataset.songTitle;
-        const artist = btn.dataset.songArtist;
-        const playUrl = btn.dataset.playUrl;
-        addToTempList(songId, title, artist, playUrl);
-    }
-    
-    if (e.target.closest('.add-to-playlist-btn')) {
-        const menu = e.target.closest('.playlist-menu');
-        if (menu) {
-            const songId = parseInt(menu.dataset.songId);
-            addToPlaylist(songId);
-        }
-    }
 });
 
 function handleSearchKeyup(event) {
@@ -362,19 +360,10 @@ function performSearch() {
                                             onclick="playSong('/play/${song.id}/', '${titleEscaped}', '${artistEscaped}', ${song.id})">
                                         <i class="bi bi-play-fill"></i> 播放
                                     </button>
-                                    <button class="btn btn-sm btn-outline-info" 
-                                            onclick="addToTempList(${song.id}, '${titleEscaped}', '${artistEscaped}', '/play/${song.id}/')">
-                                        <i class="bi bi-plus-circle"></i> 临时列表
-                                    </button>
                                     ${USER_AUTHENTICATED ? `
-                                    <div class="btn-group" role="group">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                                            <i class="bi bi-list-ul"></i> 歌单
-                                        </button>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" href="#" onclick="addToPlaylist(${song.id})">选择歌单...</a></li>
-                                        </ul>
-                                    </div>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="showPlaylistModal(${song.id})">
+                                        <i class="bi bi-list-ul"></i> 歌单
+                                    </button>
                                     ` : ''}
                                 </div>
                             </td>
@@ -401,58 +390,254 @@ function closeSearchResults() {
     document.getElementById('searchInput').value = '';
 }
 
-function addToPlaylist(songId) {
-    // 加载所有歌单
-    fetch('/api/playlists/')
-        .then(response => response.json())
-        .then(playlists => {
+// 显示选择歌单模态框
+function showPlaylistModal(songId) {
+    console.log('showPlaylistModal 被调用，songId:', songId);
+    
+    // 验证参数
+    if (!songId) {
+        console.error('showPlaylistModal: songId 未提供');
+        alert('歌曲ID未找到');
+        return;
+    }
+    
+    const currentSongIdInput = document.getElementById('currentSongIdForPlaylist');
+    const playlistList = document.getElementById('playlistList');
+    
+    if (!currentSongIdInput) {
+        console.error('showPlaylistModal: 找不到 currentSongIdForPlaylist 元素');
+        alert('页面元素未找到，请刷新页面重试');
+        return;
+    }
+    
+    if (!playlistList) {
+        console.error('showPlaylistModal: 找不到 playlistList 元素');
+        alert('页面元素未找到，请刷新页面重试');
+        return;
+    }
+    
+    currentSongIdInput.value = songId;
+    playlistList.innerHTML = '<p class="text-muted text-center">加载中...</p>';
+    
+    // 加载所有歌单 - 使用新的简单API端点
+    console.log('开始加载歌单列表...');
+    fetch('/api/playlists/list/', {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin'
+    })
+        .then(async response => {
+            console.log('歌单列表API响应状态:', response.status);
+            console.log('响应头:', response.headers);
+            
+            // 先读取响应文本
+            const text = await response.text();
+            console.log('响应内容:', text.substring(0, 500));
+            
+            // 检查响应类型
+            const contentType = response.headers.get('content-type') || '';
+            const isJson = contentType.includes('application/json');
+            
+            if (!response.ok) {
+                // 尝试解析错误信息
+                if (isJson) {
+                    try {
+                        const errorData = JSON.parse(text);
+                        throw new Error(errorData.error || errorData.detail || `HTTP错误: ${response.status}`);
+                    } catch (e) {
+                        throw new Error(`HTTP错误: ${response.status}`);
+                    }
+                } else {
+                    // 如果是401或403，可能是认证问题
+                    if (response.status === 401 || response.status === 403) {
+                        throw new Error('请先登录');
+                    }
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+            }
+            
+            if (!isJson) {
+                console.error('响应不是JSON格式:', text.substring(0, 500));
+                throw new Error('服务器返回了非JSON响应');
+            }
+            
+            return JSON.parse(text);
+        })
+        .then(data => {
+            console.log('收到歌单数据:', data);
+            
+            // 新的API直接返回数组，不需要处理分页
+            let playlists = [];
+            if (Array.isArray(data)) {
+                playlists = data;
+            } else {
+                console.error('歌单数据格式错误，期望数组:', data);
+                throw new Error('歌单数据格式错误');
+            }
+            
+            console.log('解析后的歌单列表:', playlists);
+            
             if (playlists.length === 0) {
-                if (confirm('您还没有创建任何歌单，是否现在创建？')) {
-                    window.location.href = '{% url "playlist_list" %}';
+                playlistList.innerHTML = `
+                    <p class="text-muted text-center">您还没有创建任何歌单</p>
+                    <div class="text-center">
+                        <a href="{% url 'playlist_list' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> 创建歌单
+                        </a>
+                    </div>
+                `;
+                // 即使没有歌单，也显示模态框
+                const modalElement = document.getElementById('selectPlaylistModal');
+                if (modalElement) {
+                    const modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+                } else {
+                    console.error('找不到模态框元素 selectPlaylistModal');
                 }
                 return;
             }
             
-            // 创建选择菜单
-            let menuHtml = '';
+            // 创建歌单列表
+            let html = '<div class="list-group">';
             playlists.forEach(playlist => {
-                menuHtml += `<li><a class="dropdown-item" href="#" onclick="addSongToPlaylist(${playlist.id}, ${songId})">${playlist.name} (${playlist.song_count}首)</a></li>`;
+                html += `
+                    <button type="button" class="list-group-item list-group-item-action" 
+                            onclick="addSongToPlaylist(${playlist.id}, ${songId})">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">${escapeHtml(playlist.name)}</h6>
+                                <small class="text-muted">${playlist.song_count || 0} 首歌曲</small>
+                            </div>
+                            <i class="bi bi-chevron-right"></i>
+                        </div>
+                    </button>
+                `;
             });
+            html += '</div>';
+            playlistList.innerHTML = html;
             
-            // 显示选择对话框
-            const menuId = `playlistMenu${songId}`;
-            const menu = document.getElementById(menuId);
-            if (menu) {
-                menu.innerHTML = menuHtml;
+            // 显示模态框
+            const modalElement = document.getElementById('selectPlaylistModal');
+            if (modalElement) {
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+                console.log('模态框已显示');
+            } else {
+                console.error('找不到模态框元素 selectPlaylistModal');
+                alert('无法显示歌单选择框，请刷新页面重试');
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('加载歌单失败');
+            console.error('加载歌单列表失败:', error);
+            console.error('错误详情:', error.message, error.stack);
+            
+            let errorMessage = '加载歌单失败，请重试';
+            if (error.message === '请先登录') {
+                errorMessage = '请先登录后再添加歌曲到歌单';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            playlistList.innerHTML = `
+                <p class="text-danger text-center">${escapeHtml(errorMessage)}</p>
+                <div class="text-center mt-3">
+                    <button class="btn btn-sm btn-primary" onclick="showPlaylistModal(${songId})">
+                        <i class="bi bi-arrow-clockwise"></i> 重试
+                    </button>
+                </div>
+            `;
+            
+            // 即使失败也尝试显示模态框
+            const modalElement = document.getElementById('selectPlaylistModal');
+            if (modalElement) {
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            }
         });
 }
 
 function addSongToPlaylist(playlistId, songId) {
+    // 如果没有传入songId，从隐藏字段获取
+    if (!songId) {
+        songId = document.getElementById('currentSongIdForPlaylist')?.value;
+    }
+    
+    // 验证参数
+    if (!playlistId || !songId) {
+        console.error('addSongToPlaylist: 缺少必要参数', { playlistId, songId });
+        alert('参数错误：歌单ID或歌曲ID缺失');
+        return;
+    }
+    
+    // 确保是数字类型
+    playlistId = parseInt(playlistId);
+    songId = parseInt(songId);
+    
+    if (isNaN(playlistId) || isNaN(songId)) {
+        console.error('addSongToPlaylist: 参数类型错误', { playlistId, songId });
+        alert('参数错误：歌单ID或歌曲ID必须是数字');
+        return;
+    }
+    
+    const csrfToken = getCookie('csrftoken');
+    if (!csrfToken) {
+        alert('CSRF token未找到，请刷新页面后重试');
+        return;
+    }
+    
+    console.log('添加歌曲到歌单:', { playlistId, songId });
+    
     fetch(`/api/playlists/${playlistId}/add_song/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
+            'Accept': 'application/json',
+            'X-CSRFToken': csrfToken
         },
+        credentials: 'same-origin',
         body: JSON.stringify({ song_id: songId })
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            alert(data.error);
-        } else {
-            alert('已添加到歌单');
+    .then(async response => {
+        const text = await response.text();
+        const contentType = response.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+        
+        if (!isJson) {
+            throw new Error('服务器返回了非JSON响应');
         }
+        
+        const jsonData = JSON.parse(text);
+        
+        if (!response.ok) {
+            throw new Error(jsonData.error || '添加失败');
+        }
+        
+        return jsonData;
+    })
+    .then(data => {
+        // 关闭模态框
+        const modal = bootstrap.Modal.getInstance(document.getElementById('selectPlaylistModal'));
+        if (modal) {
+            modal.hide();
+        }
+        // 显示成功消息（可选，静默处理）
+        // alert('已添加到歌单');
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('添加失败');
+        alert(error.message || '添加失败');
     });
+}
+
+// HTML转义函数
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function getCookie(name) {

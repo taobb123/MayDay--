@@ -130,5 +130,13 @@ REST_FRAMEWORK = {
     ],
     # 根据Accept头选择渲染器
     'DEFAULT_CONTENT_NEGOTIATION_CLASS': 'rest_framework.negotiation.DefaultContentNegotiation',
+    # 确保API请求优先返回JSON
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ],
+    # 自定义异常处理，确保API错误返回JSON
+    'EXCEPTION_HANDLER': 'mayday_app.views.custom_exception_handler',
 }
 

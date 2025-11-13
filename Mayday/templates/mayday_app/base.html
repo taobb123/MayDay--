@@ -127,71 +127,6 @@
             max-height: 60px;
         }
         
-        .temp-list-container {
-            max-height: 300px;
-            overflow-y: auto;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 10px;
-            margin-bottom: 15px;
-            animation: fadeInUp 0.5s ease;
-        }
-        
-        .temp-list-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .temp-list-header h5 {
-            color: white;
-            margin: 0;
-            font-size: 16px;
-        }
-        
-        .temp-list-content {
-            max-height: 250px;
-            overflow-y: auto;
-        }
-        
-        .temp-list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            margin-bottom: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: white;
-            transition: background 0.3s;
-        }
-        
-        .temp-list-item:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        
-        .temp-list-item-info {
-            flex: 1;
-        }
-        
-        .temp-list-item-title {
-            font-weight: 500;
-            margin-bottom: 3px;
-        }
-        
-        .temp-list-item-artist {
-            font-size: 12px;
-            opacity: 0.8;
-        }
-        
-        .temp-list-item-actions {
-            display: flex;
-            gap: 5px;
-        }
-        
         .lyrics-mini {
             display: none;
             text-align: center;
@@ -652,25 +587,6 @@
                 <div class="lyrics-mini-line current" id="currentLyricLine">暂无歌词</div>
             </div>
         </div>
-        <!-- 临时列表显示区域 -->
-        <div class="temp-list-container" id="tempListContainer" style="display: none;">
-            <div class="temp-list-header">
-                <h5><i class="bi bi-list-ul"></i> 临时播放列表</h5>
-                <div>
-                    {% if user.is_authenticated %}
-                    <button class="btn btn-sm btn-primary me-2" onclick="saveTempListAsPlaylist()">
-                        <i class="bi bi-save"></i> 保存为歌单
-                    </button>
-                    {% endif %}
-                    <button class="btn btn-sm btn-danger" onclick="clearTempList()">
-                        <i class="bi bi-trash"></i> 清空
-                    </button>
-                </div>
-            </div>
-            <div class="temp-list-content" id="tempListContent">
-                <p class="text-muted text-center py-3">临时列表为空</p>
-            </div>
-        </div>
         <!-- 歌词显示区域（展开时显示，位于工具栏上方） -->
         <div class="lyrics-container" id="lyricsContainer" style="display: none;">
             <div id="lyricsContent" class="lyrics-empty">暂无歌词</div>
@@ -733,9 +649,6 @@
                         </div>
                     </div>
                     <div class="col-md-3 text-end">
-                        <button class="btn btn-sm btn-info me-2" onclick="toggleTempList()" title="临时列表">
-                            <i class="bi bi-list-ul"></i> 临时列表 (<span id="tempListCount">0</span>)
-                        </button>
                         <button class="btn btn-sm btn-secondary" onclick="closePlayer()">
                             <i class="bi bi-x-lg"></i> 关闭
                         </button>
@@ -757,8 +670,6 @@
         let shuffledPlaylist = []; // 随机播放列表
         let lyricsAutoScrollPaused = false; // 歌词自动滚动是否暂停
         let lyricsScrollTimeout = null; // 恢复自动滚动的定时器
-        let tempList = []; // 临时播放列表
-        let tempListVisible = false; // 临时列表是否可见
         let isProgramScrolling = false; // 标记是否是程序触发的滚动
         let lyricsExpanded = false; // 歌词是否展开
         
@@ -1408,6 +1319,37 @@
             }
         });
         
+        // 设置播放列表（供外部调用，如从歌单页面）
+        function setPlaylist(songs, startIndex = 0) {
+            if (!Array.isArray(songs) || songs.length === 0) {
+                console.warn('setPlaylist: 无效的歌曲列表');
+                return;
+            }
+            
+            playlist = songs.map(song => ({
+                url: song.url,
+                title: song.title,
+                artist: song.artist,
+                id: song.id
+            }));
+            
+            // 设置当前索引
+            if (startIndex >= 0 && startIndex < playlist.length) {
+                currentIndex = startIndex;
+            } else {
+                currentIndex = 0;
+            }
+            
+            // 更新随机播放列表
+            updateShuffledPlaylist();
+            
+            console.log(`播放列表已设置: ${playlist.length} 首歌曲，当前索引: ${currentIndex}`);
+        }
+        
+        // 将setPlaylist暴露为全局函数
+        window.setPlaylist = setPlaylist;
+        window.playSong = playSong;
+        
         // 音乐播放器功能
         async function playSong(songUrl, songTitle, artist, songId) {
             const player = document.getElementById('audioPlayer');
@@ -1705,150 +1647,6 @@
             localStorage.removeItem('playerState');
         }
         
-        // 临时列表相关函数
-        function loadTempList() {
-            const saved = localStorage.getItem('tempList');
-            if (saved) {
-                tempList = JSON.parse(saved);
-            } else {
-                tempList = [];
-            }
-            updateTempListDisplay();
-        }
-        
-        function saveTempList() {
-            localStorage.setItem('tempList', JSON.stringify(tempList));
-            updateTempListDisplay();
-        }
-        
-        function addToTempList(songId, title, artist, playUrl) {
-            // 检查是否已存在
-            if (tempList.find(item => item.id === songId)) {
-                return;
-            }
-            
-            tempList.push({
-                id: songId,
-                title: title,
-                artist: artist,
-                playUrl: playUrl || `/play/${songId}/`
-            });
-            
-            saveTempList();
-        }
-        
-        function removeFromTempList(songId) {
-            tempList = tempList.filter(item => item.id !== songId);
-            saveTempList();
-        }
-        
-        function clearTempList() {
-            if (confirm('确定要清空临时列表吗？')) {
-                tempList = [];
-                saveTempList();
-            }
-        }
-        
-        function updateTempListDisplay() {
-            const countEl = document.getElementById('tempListCount');
-            const contentEl = document.getElementById('tempListContent');
-            
-            if (countEl) {
-                countEl.textContent = tempList.length;
-            }
-            
-            if (contentEl) {
-                if (tempList.length === 0) {
-                    contentEl.innerHTML = '<p class="text-muted text-center py-3">临时列表为空</p>';
-                } else {
-                    let html = '';
-                    tempList.forEach((song, index) => {
-                        html += `
-                            <div class="temp-list-item">
-                                <div class="temp-list-item-info">
-                                    <div class="temp-list-item-title">${song.title}</div>
-                                    <div class="temp-list-item-artist">${song.artist}</div>
-                                </div>
-                                <div class="temp-list-item-actions">
-                                    <button class="btn btn-sm btn-primary" onclick="playSongFromTempList(${index})" title="播放">
-                                        <i class="bi bi-play-fill"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" onclick="removeFromTempList(${song.id})" title="移除">
-                                        <i class="bi bi-x"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    contentEl.innerHTML = html;
-                }
-            }
-        }
-        
-        function toggleTempList() {
-            tempListVisible = !tempListVisible;
-            const container = document.getElementById('tempListContainer');
-            if (container) {
-                container.style.display = tempListVisible ? 'block' : 'none';
-            }
-        }
-        
-        function playSongFromTempList(index) {
-            if (index >= 0 && index < tempList.length) {
-                const song = tempList[index];
-                playSong(song.playUrl, song.title, song.artist, song.id);
-                // 将临时列表设置为播放列表
-                playlist = tempList.map(s => ({
-                    id: s.id,
-                    title: s.title,
-                    artist: s.artist,
-                    playUrl: s.playUrl
-                }));
-                currentIndex = index;
-            }
-        }
-        
-        function saveTempListAsPlaylist() {
-            if (tempList.length === 0) {
-                alert('临时列表为空');
-                return;
-            }
-            
-            const name = prompt('请输入歌单名称：');
-            if (!name || !name.trim()) {
-                return;
-            }
-            
-            const songIds = tempList.map(s => s.id);
-            
-            fetch('/api/playlists/save_temp_list/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    name: name.trim(),
-                    song_ids: songIds
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert(data.error);
-                } else {
-                    alert('歌单创建成功！');
-                    if (confirm('是否清空临时列表？')) {
-                        clearTempList();
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('保存失败');
-            });
-        }
-        
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -1863,11 +1661,6 @@
             }
             return cookieValue;
         }
-        
-        // 全局函数，供其他页面调用
-        window.addToTempList = function(songId, title, artist, playUrl) {
-            addToTempList(songId, title, artist, playUrl);
-        };
         
         // 保存播放器状态到 localStorage
         function savePlayerState() {
@@ -2082,8 +1875,6 @@
         
         // 初始化播放器事件
         document.addEventListener('DOMContentLoaded', async function() {
-            // 加载临时列表
-            loadTempList();
             const player = document.getElementById('audioPlayer');
             
             // 初始化播放列表（等待完成）

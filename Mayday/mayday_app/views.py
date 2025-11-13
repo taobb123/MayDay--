@@ -31,6 +31,26 @@ from .timeline import TimelineRepository
 from .messaging import message_queue
 from .pagination import AlbumPagination, TimelinePagination, SongPagination
 from datetime import datetime, timedelta
+from rest_framework.views import exception_handler as drf_exception_handler
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied, NotAuthenticated
+
+
+def custom_exception_handler(exc, context):
+    """自定义异常处理器，确保API错误返回JSON"""
+    # 调用DRF的默认异常处理器
+    response = drf_exception_handler(exc, context)
+    
+    if response is not None:
+        # 确保响应是JSON格式
+        response['Content-Type'] = 'application/json'
+        
+        # 如果是认证/权限错误，提供更友好的错误信息
+        if isinstance(exc, (AuthenticationFailed, NotAuthenticated)):
+            response.data = {'error': '请先登录'}
+        elif isinstance(exc, PermissionDenied):
+            response.data = {'error': '没有权限访问此资源'}
+    
+    return response
 
 
 class AlbumViewSet(viewsets.ModelViewSet):
@@ -405,17 +425,106 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         """只返回当前用户的歌单"""
         return Playlist.objects.filter(user=self.request.user).prefetch_related('songs__song')
     
+    def initial(self, request, *args, **kwargs):
+        """重写initial方法，确保认证错误返回JSON"""
+        try:
+            super().initial(request, *args, **kwargs)
+        except Exception as exc:
+            # 如果是认证或权限错误，返回JSON响应
+            if hasattr(exc, 'status_code') and exc.status_code in [401, 403]:
+                from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
+                if isinstance(exc, AuthenticationFailed):
+                    raise AuthenticationFailed({'error': '请先登录'})
+                elif isinstance(exc, PermissionDenied):
+                    raise PermissionDenied({'error': '没有权限访问此资源'})
+            raise
+    
     def perform_create(self, serializer):
         """创建歌单时自动设置用户"""
         serializer.save(user=self.request.user)
     
     def get_renderers(self):
         """根据Accept头选择渲染器，优先返回JSON"""
-        # 如果请求头明确要求JSON，只返回JSON渲染器
+        # 对于所有API路径，强制使用JSON渲染器（不检查Accept头）
+        request_path = self.request.path or ''
+        if '/api/' in request_path:
+            print(f"get_renderers: 检测到API路径 {request_path}，强制使用JSONRenderer")
+            return [rest_framework.renderers.JSONRenderer()]
+        
+        # 检查Accept头
         accept_header = self.request.META.get('HTTP_ACCEPT', '')
         if 'application/json' in accept_header:
+            print(f"get_renderers: 检测到Accept: application/json，使用JSONRenderer")
             return [rest_framework.renderers.JSONRenderer()]
+        
+        print(f"get_renderers: 使用默认渲染器，路径: {request_path}, Accept: {accept_header}")
         return super().get_renderers()
+    
+    def list(self, request, *args, **kwargs):
+        """重写list方法，确保返回JSON响应"""
+        try:
+            # 调试信息
+            request_path = request.path or ''
+            accept_header = request.META.get('HTTP_ACCEPT', '')
+            print(f"PlaylistViewSet.list - Path: {request_path}, Accept: {accept_header}, User: {request.user}, Authenticated: {request.user.is_authenticated}")
+            
+            queryset = self.filter_queryset(self.get_queryset())
+            
+            # 对于所有API路径，强制返回JSON（不依赖Accept头）
+            if '/api/' in request_path:
+                print("检测到API路径，强制返回JSON")
+                page = self.paginate_queryset(queryset)
+                if page is not None:
+                    serializer = self.get_serializer(page, many=True)
+                    response = self.get_paginated_response(serializer.data)
+                    # 强制设置Content-Type，确保是JSON
+                    response['Content-Type'] = 'application/json; charset=utf-8'
+                    print(f"返回分页JSON响应，共 {len(serializer.data)} 条记录")
+                    return response
+                
+                serializer = self.get_serializer(queryset, many=True)
+                # 直接返回数据，让JSONRenderer处理（已在get_renderers中强制使用）
+                response = Response(serializer.data, content_type='application/json; charset=utf-8')
+                print(f"返回JSON响应，共 {len(serializer.data)} 条记录")
+                return response
+            
+            # 检查Accept头
+            if 'application/json' in accept_header:
+                print("检测到Accept: application/json，返回JSON")
+                page = self.paginate_queryset(queryset)
+                if page is not None:
+                    serializer = self.get_serializer(page, many=True)
+                    response = self.get_paginated_response(serializer.data)
+                    response['Content-Type'] = 'application/json; charset=utf-8'
+                    return response
+                
+                serializer = self.get_serializer(queryset, many=True)
+                response = Response(serializer.data, content_type='application/json; charset=utf-8')
+                return response
+            
+            # 默认行为：对于API路径，即使没有Accept头也返回JSON
+            print("使用默认行为，但强制返回JSON")
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                response = self.get_paginated_response(serializer.data)
+                response['Content-Type'] = 'application/json; charset=utf-8'
+                return response
+            
+            serializer = self.get_serializer(queryset, many=True)
+            response = Response(serializer.data, content_type='application/json; charset=utf-8')
+            return response
+        except Exception as e:
+            # 捕获所有异常，确保返回JSON错误响应
+            import traceback
+            error_detail = traceback.format_exc()
+            print(f"PlaylistViewSet.list 异常: {error_detail}")
+            error_data = {'error': f'服务器错误: {str(e)}'}
+            return Response(
+                error_data,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content_type='application/json; charset=utf-8'
+            )
     
     def create(self, request, *args, **kwargs):
         """重写create方法，确保返回JSON响应"""
@@ -440,20 +549,35 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         playlist = self.get_object()
         song_id = request.data.get('song_id')
         
+        # 调试信息
+        print(f"add_song API调用 - Playlist ID: {pk}, Song ID: {song_id}, User: {request.user}")
+        print(f"Request data: {request.data}")
+        
         if not song_id:
+            print("错误: 缺少song_id参数")
             return Response({'error': '缺少song_id参数'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 确保song_id是整数
+        try:
+            song_id = int(song_id)
+        except (ValueError, TypeError):
+            print(f"错误: song_id不是有效的整数: {song_id}")
+            return Response({'error': 'song_id必须是整数'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
             song = Song.objects.get(id=song_id)
         except Song.DoesNotExist:
+            print(f"错误: 歌曲不存在 - Song ID: {song_id}")
             return Response({'error': '歌曲不存在'}, status=status.HTTP_404_NOT_FOUND)
         
         # 检查是否已存在
         if PlaylistSong.objects.filter(playlist=playlist, song=song).exists():
+            print(f"警告: 歌曲已在歌单中 - Playlist: {playlist.name}, Song: {song.title}")
             return Response({'error': '歌曲已在歌单中'}, status=status.HTTP_400_BAD_REQUEST)
         
         playlist_song = PlaylistSong.objects.create(playlist=playlist, song=song)
         serializer = PlaylistSongSerializer(playlist_song)
+        print(f"成功: 歌曲已添加到歌单 - Playlist: {playlist.name}, Song: {song.title}")
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     @action(detail=True, methods=['delete'])
@@ -709,6 +833,136 @@ def delete_playlist_api(request, playlist_id):
         return JsonResponse({'error': '歌单不存在'}, status=404)
     except Exception as e:
         return JsonResponse({'error': f'删除失败: {str(e)}'}, status=500)
+
+
+@login_required
+def get_playlists_api(request):
+    """获取用户歌单列表API - 使用JsonResponse确保返回JSON"""
+    """GET /api/playlists/list/ - 返回当前用户的歌单列表，供"添加到歌单"弹窗选择"""
+    if request.method != 'GET':
+        return JsonResponse({'error': '只支持GET请求'}, status=405)
+    
+    try:
+        # 获取当前用户的所有歌单
+        playlists = Playlist.objects.filter(user=request.user).order_by('-created_at')
+        
+        # 构建简单的歌单列表（只包含id和name，供选择使用）
+        playlist_list = [
+            {
+                'id': playlist.id,
+                'name': playlist.name,
+                'song_count': playlist.get_song_count()
+            }
+            for playlist in playlists
+        ]
+        
+        return JsonResponse(playlist_list, safe=False)
+        
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"获取歌单列表错误: {error_detail}")
+        return JsonResponse({'error': f'获取失败: {str(e)}'}, status=500)
+
+
+@login_required
+def add_song_to_playlist_api(request, playlist_id):
+    """添加歌曲到歌单API - 使用JsonResponse确保返回JSON"""
+    """POST /api/playlists/{playlist_id}/add_song/ - 添加歌曲到指定歌单"""
+    if request.method != 'POST':
+        return JsonResponse({'error': '只支持POST请求'}, status=405)
+    
+    try:
+        # 验证歌单是否存在且属于当前用户
+        try:
+            playlist = Playlist.objects.get(id=playlist_id, user=request.user)
+        except Playlist.DoesNotExist:
+            return JsonResponse({'error': '歌单不存在'}, status=404)
+        
+        # 解析请求体
+        if request.content_type and 'application/json' in request.content_type:
+            try:
+                data = json.loads(request.body.decode('utf-8'))
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                return JsonResponse({'error': f'无效的JSON数据: {str(e)}'}, status=400)
+        else:
+            data = request.POST
+        
+        song_id = data.get('song_id')
+        if not song_id:
+            return JsonResponse({'error': '缺少song_id参数'}, status=400)
+        
+        # 确保song_id是整数
+        try:
+            song_id = int(song_id)
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'song_id必须是整数'}, status=400)
+        
+        # 验证歌曲是否存在
+        try:
+            song = Song.objects.get(id=song_id)
+        except Song.DoesNotExist:
+            return JsonResponse({'error': '歌曲不存在'}, status=404)
+        
+        # 检查是否已存在（使用get_or_create防止重复）
+        playlist_song, created = PlaylistSong.objects.get_or_create(
+            playlist=playlist,
+            song=song
+        )
+        
+        if not created:
+            return JsonResponse({
+                'success': False,
+                'message': '歌曲已在歌单中',
+                'playlist_name': playlist.name
+            }, status=200)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'歌曲已添加到歌单「{playlist.name}」',
+            'playlist_name': playlist.name
+        }, status=201)
+        
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"添加歌曲到歌单错误: {error_detail}")
+        return JsonResponse({'error': f'添加失败: {str(e)}'}, status=500)
+
+
+@login_required
+def remove_song_from_playlist_api(request, playlist_id, song_id):
+    """从歌单移除歌曲API - 使用JsonResponse确保返回JSON"""
+    """DELETE /api/playlists/{playlist_id}/songs/{song_id}/ - 从指定歌单移除歌曲"""
+    if request.method != 'DELETE':
+        return JsonResponse({'error': '只支持DELETE请求'}, status=405)
+    
+    try:
+        # 验证歌单是否存在且属于当前用户
+        try:
+            playlist = Playlist.objects.get(id=playlist_id, user=request.user)
+        except Playlist.DoesNotExist:
+            return JsonResponse({'error': '歌单不存在'}, status=404)
+        
+        # 验证歌曲是否存在
+        try:
+            song = Song.objects.get(id=song_id)
+        except Song.DoesNotExist:
+            return JsonResponse({'error': '歌曲不存在'}, status=404)
+        
+        # 删除关联
+        try:
+            playlist_song = PlaylistSong.objects.get(playlist=playlist, song=song)
+            playlist_song.delete()
+            return JsonResponse({'message': '歌曲已从歌单移除'}, status=200)
+        except PlaylistSong.DoesNotExist:
+            return JsonResponse({'error': '歌曲不在歌单中'}, status=404)
+        
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"从歌单移除歌曲错误: {error_detail}")
+        return JsonResponse({'error': f'移除失败: {str(e)}'}, status=500)
 
 
 @login_required

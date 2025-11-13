@@ -37,7 +37,10 @@
             </thead>
             <tbody>
                 {% for playlist_song in playlist_songs %}
-                <tr>
+                <tr data-song-id="{{ playlist_song.song.id }}" 
+                    data-song-title="{{ playlist_song.song.title|escapejs }}" 
+                    data-song-artist="{{ playlist_song.song.artist|escapejs }}" 
+                    data-song-url="{% url 'play_song' playlist_song.song.id %}">
                     <td>{{ forloop.counter }}</td>
                     <td>{{ playlist_song.song.title }}</td>
                     <td>{{ playlist_song.song.artist }}</td>
@@ -53,14 +56,10 @@
                         <div class="btn-group" role="group">
                             {% if playlist_song.song.file_path or playlist_song.song.original_path %}
                             <button class="btn btn-sm btn-primary" 
-                                    onclick="playSong('{% url 'play_song' playlist_song.song.id %}', '{{ playlist_song.song.title }}', '{{ playlist_song.song.artist }}', {{ playlist_song.song.id }})">
+                                    onclick="playSongFromPlaylist('{% url 'play_song' playlist_song.song.id %}', '{{ playlist_song.song.title|escapejs }}', '{{ playlist_song.song.artist|escapejs }}', {{ playlist_song.song.id }}, {{ forloop.counter0 }})">
                                 <i class="bi bi-play-fill"></i> 播放
                             </button>
                             {% endif %}
-                            <button class="btn btn-sm btn-outline-primary" 
-                                    onclick="addToTempList({{ playlist_song.song.id }}, '{{ playlist_song.song.title }}', '{{ playlist_song.song.artist }}')">
-                                <i class="bi bi-plus-circle"></i> 临时列表
-                            </button>
                             <div class="btn-group" role="group">
                                 <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
                                     <i class="bi bi-list-ul"></i> 移动到
@@ -256,6 +255,69 @@ function performMoveSong(playlistId, songId, targetPlaylistId) {
         console.error('Error:', error);
         alert('移动失败');
     });
+}
+
+// 从歌单播放歌曲，同时加载整个歌单到播放器
+function playSongFromPlaylist(songUrl, songTitle, artist, songId, songIndex) {
+    // 获取页面上所有歌曲信息（从data属性获取，更可靠）
+    const songRows = document.querySelectorAll('tbody tr[data-song-id]');
+    const playlistSongs = [];
+    
+    songRows.forEach((row) => {
+        const songIdAttr = row.getAttribute('data-song-id');
+        const songTitleAttr = row.getAttribute('data-song-title');
+        const songArtistAttr = row.getAttribute('data-song-artist');
+        const songUrlAttr = row.getAttribute('data-song-url');
+        
+        if (songIdAttr && songTitleAttr && songArtistAttr && songUrlAttr) {
+            playlistSongs.push({
+                url: songUrlAttr,
+                title: songTitleAttr,
+                artist: songArtistAttr,
+                id: parseInt(songIdAttr)
+            });
+        }
+    });
+    
+    // 如果从data属性获取失败，尝试从onclick解析（备用方案）
+    if (playlistSongs.length === 0) {
+        const playButtons = document.querySelectorAll('button[onclick*="playSongFromPlaylist"]');
+        playButtons.forEach((button) => {
+            const onclick = button.getAttribute('onclick');
+            const match = onclick.match(/playSongFromPlaylist\('([^']+)',\s*'([^']+)',\s*'([^']+)',\s*(\d+),\s*(\d+)\)/);
+            if (match) {
+                playlistSongs.push({
+                    url: match[1],
+                    title: match[2].replace(/\\'/g, "'").replace(/\\"/g, '"'),
+                    artist: match[3].replace(/\\'/g, "'").replace(/\\"/g, '"'),
+                    id: parseInt(match[4])
+                });
+            }
+        });
+    }
+    
+    // 如果找到了歌曲列表，设置到播放器
+    if (playlistSongs.length > 0) {
+        if (typeof window.setPlaylist === 'function') {
+            window.setPlaylist(playlistSongs, songIndex);
+        } else if (typeof window.playlist !== 'undefined') {
+            // 如果setPlaylist函数不存在，直接设置全局playlist变量
+            window.playlist = playlistSongs;
+            window.currentIndex = songIndex;
+            // 更新随机播放列表
+            if (typeof window.updateShuffledPlaylist === 'function') {
+                window.updateShuffledPlaylist();
+            }
+        }
+    }
+    
+    // 播放选中的歌曲
+    if (typeof window.playSong === 'function') {
+        window.playSong(songUrl, songTitle, artist, songId);
+    } else {
+        // 如果playSong函数不存在，直接调用
+        playSong(songUrl, songTitle, artist, songId);
+    }
 }
 
 function getCookie(name) {

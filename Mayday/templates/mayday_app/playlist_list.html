@@ -350,10 +350,21 @@ function performSongSearch(query) {
 }
 
 function addSongToPlaylist(songId, songTitle) {
-    const playlistId = document.getElementById('currentPlaylistId').value;
+    const playlistId = document.getElementById('currentPlaylistId')?.value;
     
     if (!playlistId) {
+        console.error('addSongToPlaylist: 歌单ID未找到');
         alert('歌单ID未找到');
+        return;
+    }
+    
+    // 确保是数字类型
+    const playlistIdNum = parseInt(playlistId);
+    const songIdNum = parseInt(songId);
+    
+    if (isNaN(playlistIdNum) || isNaN(songIdNum)) {
+        console.error('addSongToPlaylist: 参数类型错误', { playlistId: playlistIdNum, songId: songIdNum });
+        alert('参数错误：歌单ID或歌曲ID必须是数字');
         return;
     }
     
@@ -363,7 +374,9 @@ function addSongToPlaylist(songId, songTitle) {
         return;
     }
     
-    fetch(`/api/playlists/${playlistId}/add_song/`, {
+    console.log('添加歌曲到歌单:', { playlistId: playlistIdNum, songId: songIdNum });
+    
+    fetch(`/api/playlists/${playlistIdNum}/add_song/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -371,7 +384,7 @@ function addSongToPlaylist(songId, songTitle) {
             'X-CSRFToken': csrfToken
         },
         credentials: 'same-origin',
-        body: JSON.stringify({ song_id: songId })
+        body: JSON.stringify({ song_id: songIdNum })
     })
     .then(async response => {
         const text = await response.text();
@@ -391,9 +404,7 @@ function addSongToPlaylist(songId, songTitle) {
         return jsonData;
     })
     .then(data => {
-        // 显示成功消息（songTitle已经通过escapeHtml转义，但alert中需要再次处理）
-        const safeTitle = songTitle.replace(/'/g, "\\'").replace(/"/g, '\\"');
-        alert(`"${safeTitle}" 已添加到歌单`);
+        // 静默处理，不显示成功消息
         // 刷新页面
         location.reload();
     })

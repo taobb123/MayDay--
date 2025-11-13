@@ -15,11 +15,15 @@ router.register(r'playlists', views.PlaylistViewSet)
 
 urlpatterns = [
     # 歌单API路由（使用JsonResponse确保返回JSON）- 必须在router之前，避免路由冲突
+    # 简单函数视图API（优先匹配）
+    path('api/playlists/list/', views.get_playlists_api, name='get_playlists_api'),
     path('api/playlists/create/', views.create_playlist_api, name='create_playlist_api'),
     path('api/playlists/<int:playlist_id>/update/', views.update_playlist_api, name='update_playlist_api'),
     path('api/playlists/<int:playlist_id>/delete/', views.delete_playlist_api, name='delete_playlist_api'),
+    path('api/playlists/<int:playlist_id>/add_song/', views.add_song_to_playlist_api, name='add_song_to_playlist_api'),
+    path('api/playlists/<int:playlist_id>/songs/<int:song_id>/', views.remove_song_from_playlist_api, name='remove_song_from_playlist_api'),
     
-    # API路由
+    # API路由（DRF ViewSet，放在后面避免冲突）
     path('api/', include(router.urls)),
     path('api/scan/', views.ScanView.as_view(), name='scan'),
     path('api/timeline/', views.TimelineView.as_view(), name='timeline'),
