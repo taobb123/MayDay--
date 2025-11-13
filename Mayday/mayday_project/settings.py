@@ -105,7 +105,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Music directory path
-MUSIC_DIRECTORY = r'D:\Music\方大同'
+MUSIC_DIRECTORY = r'D:\Music\各种音乐榜单\周杰伦[2000-2022]录音室专辑+EP合集[4.76GB]\2022-最伟大的作品'
 
 # Lyrics directory path
 LYRICS_DIRECTORY = r'C:\Lyrics'
@@ -122,5 +122,13 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
     ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    # 根据Accept头选择渲染器
+    'DEFAULT_CONTENT_NEGOTIATION_CLASS': 'rest_framework.negotiation.DefaultContentNegotiation',
 }
 

@@ -1,0 +1,244 @@
+{% extends 'mayday_app/base.html' %}
+
+{% block title %}我的歌单 - 五月天音乐收藏系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-music-note-list"></i> 我的歌单</h2>
+        <button class="btn btn-primary" onclick="showCreatePlaylistModal()">
+            <i class="bi bi-plus-circle"></i> 创建歌单
+        </button>
+    </div>
+    
+    {% if playlists %}
+    <div class="row">
+        {% for playlist in playlists %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <a href="{% url 'playlist_detail' playlist.id %}" class="text-decoration-none">
+                            {{ playlist.name }}
+                        </a>
+                    </h5>
+                    <p class="text-muted mb-2">
+                        <i class="bi bi-music-note-beamed"></i> {{ playlist.songs.count }} 首歌曲
+                    </p>
+                    <p class="text-muted small mb-3">
+                        <i class="bi bi-calendar"></i> {{ playlist.created_at|date:"Y年m月d日" }}
+                    </p>
+                    <div class="btn-group" role="group">
+                        <a href="{% url 'playlist_detail' playlist.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i> 查看
+                        </a>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="editPlaylist({{ playlist.id }}, '{{ playlist.name }}')">
+                            <i class="bi bi-pencil"></i> 编辑
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deletePlaylist({{ playlist.id }}, '{{ playlist.name }}')">
+                            <i class="bi bi-trash"></i> 删除
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-music-note-list" style="font-size: 4rem; color: #ccc;"></i>
+        <p class="text-muted mt-3">还没有创建任何歌单</p>
+        <button class="btn btn-primary" onclick="showCreatePlaylistModal()">
+            <i class="bi bi-plus-circle"></i> 创建第一个歌单
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 创建/编辑歌单模态框 -->
+<div class="modal fade" id="playlistModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="playlistModalTitle">创建歌单</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="playlistForm">
+                    <div class="mb-3">
+                        <label for="playlistName" class="form-label">歌单名称</label>
+                        <input type="text" class="form-control" id="playlistName" required>
+                        <input type="hidden" id="playlistId">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="savePlaylist()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showCreatePlaylistModal() {
+    document.getElementById('playlistModalTitle').textContent = '创建歌单';
+    document.getElementById('playlistName').value = '';
+    document.getElementById('playlistId').value = '';
+    const modal = new bootstrap.Modal(document.getElementById('playlistModal'));
+    modal.show();
+}
+
+function editPlaylist(id, name) {
+    document.getElementById('playlistModalTitle').textContent = '编辑歌单';
+    document.getElementById('playlistName').value = name;
+    document.getElementById('playlistId').value = id;
+    const modal = new bootstrap.Modal(document.getElementById('playlistModal'));
+    modal.show();
+}
+
+function savePlaylist() {
+    const name = document.getElementById('playlistName').value.trim();
+    const id = document.getElementById('playlistId').value;
+    
+    if (!name) {
+        alert('请输入歌单名称');
+        document.getElementById('playlistName').focus();
+        return;
+    }
+    
+    // 检查名称长度
+    if (name.length > 200) {
+        alert('歌单名称不能超过200个字符');
+        document.getElementById('playlistName').focus();
+        return;
+    }
+    
+    const url = id ? `/api/playlists/${id}/` : '/api/playlists/';
+    const method = id ? 'PUT' : 'POST';
+    const data = { name: name };
+    
+    const csrfToken = getCookie('csrftoken');
+    if (!csrfToken) {
+        alert('CSRF token未找到，请刷新页面后重试');
+        return;
+    }
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(data)
+    })
+    .then(async response => {
+        // 先获取响应文本，以便检查是否是JSON
+        const text = await response.text();
+        
+        // 检查响应类型
+        const contentType = response.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+        
+        // 如果不是JSON响应
+        if (!isJson) {
+            if (response.status === 403 || response.status === 401) {
+                if (confirm('您可能未登录或会话已过期，是否前往登录页面？')) {
+                    window.location.href = '/login/';
+                }
+                throw new Error('请先登录');
+            } else if (response.status === 404) {
+                throw new Error('请求的资源不存在');
+            } else {
+                // 尝试从HTML中提取错误信息
+                console.error('服务器返回HTML响应:', text.substring(0, 200));
+                throw new Error('服务器返回了非JSON响应，状态码: ' + response.status);
+            }
+        }
+        
+        // 解析JSON
+        let jsonData;
+        try {
+            jsonData = JSON.parse(text);
+        } catch (e) {
+            console.error('JSON解析失败:', text.substring(0, 200));
+            throw new Error('服务器响应格式错误');
+        }
+        
+        if (!response.ok) {
+            // 处理验证错误
+            let errorMsg = '操作失败';
+            if (jsonData.name && Array.isArray(jsonData.name)) {
+                errorMsg = jsonData.name[0];
+            } else if (jsonData.detail) {
+                errorMsg = jsonData.detail;
+            } else if (jsonData.error) {
+                errorMsg = jsonData.error;
+            } else if (jsonData.non_field_errors && Array.isArray(jsonData.non_field_errors)) {
+                errorMsg = jsonData.non_field_errors[0];
+            }
+            throw new Error(errorMsg);
+        }
+        return jsonData;
+    })
+    .then(data => {
+        // 关闭模态框
+        const modal = bootstrap.Modal.getInstance(document.getElementById('playlistModal'));
+        if (modal) {
+            modal.hide();
+        }
+        location.reload();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        let errorMsg = '操作失败';
+        if (error.message) {
+            errorMsg = error.message;
+        }
+        alert(errorMsg);
+    });
+}
+
+function deletePlaylist(id, name) {
+    if (!confirm(`确定要删除歌单"${name}"吗？`)) {
+        return;
+    }
+    
+    fetch(`/api/playlists/${id}/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('删除失败');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('删除失败');
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}
+

@@ -252,3 +252,39 @@ class Image(models.Model):
     def get_caption(self) -> Optional[str]:
         return self.caption if self.caption else None
 
+
+class Playlist(models.Model):
+    """歌单模型"""
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='playlists', verbose_name='用户')
+    name = models.CharField(max_length=200, verbose_name='歌单名称')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = '歌单'
+        verbose_name_plural = '歌单'
+        unique_together = [['user', 'name']]  # 同一用户不能有重名歌单
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.name}"
+    
+    def get_song_count(self):
+        """获取歌单中的歌曲数量"""
+        return self.songs.count()
+
+
+class PlaylistSong(models.Model):
+    """歌单与歌曲关联模型"""
+    playlist = models.ForeignKey(Playlist, on_delete=models.CASCADE, related_name='songs', verbose_name='歌单')
+    song = models.ForeignKey(Song, on_delete=models.CASCADE, related_name='playlists', verbose_name='歌曲')
+    added_at = models.DateTimeField(auto_now_add=True, verbose_name='添加时间')
+    
+    class Meta:
+        ordering = ['-added_at']
+        verbose_name = '歌单歌曲'
+        verbose_name_plural = '歌单歌曲'
+        unique_together = [['playlist', 'song']]  # 同一歌单不能重复添加同一首歌曲
+    
+    def __str__(self):
+        return f"{self.playlist.name} - {self.song.title}"

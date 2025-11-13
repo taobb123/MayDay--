@@ -4,19 +4,26 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+import rest_framework.renderers
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.generics import ListAPIView
-from django.shortcuts import render, get_object_or_404
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.http import FileResponse, Http404
 from django.conf import settings
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import os
 from pathlib import Path
-from .models import Album, Song, Tour, Quote, Image
+from .models import Album, Song, Tour, Quote, Image, Playlist, PlaylistSong
 from .serializers import (
     AlbumSerializer, SongSerializer, TourSerializer, 
-    QuoteSerializer, ImageSerializer, TimelineItemSerializer
+    QuoteSerializer, ImageSerializer, TimelineItemSerializer,
+    PlaylistSerializer, PlaylistSongSerializer
 )
 from .scanner import MusicScannerProxy, MusicScanner
 from .timeline import TimelineRepository
@@ -363,4 +370,223 @@ def play_song(request, song_id):
     
     # 如果都失败了，返回404
     return HttpResponse("歌曲文件不存在，请检查外部硬盘是否已连接", status=404, content_type='text/plain; charset=utf-8')
+
+
+class SearchView(APIView):
+    """搜索视图 - 支持歌曲标题和作者模糊搜索"""
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        """搜索歌曲"""
+        query = request.query_params.get('q', '').strip()
+        if not query:
+            return Response({'results': []})
+        
+        # 模糊搜索歌曲标题和作者
+        songs = Song.objects.filter(
+            Q(title__icontains=query) | Q(artist__icontains=query)
+        ).select_related('album')[:50]  # 限制返回50条
+        
+        serializer = SongSerializer(songs, many=True)
+        return Response({
+            'results': serializer.data,
+            'count': len(serializer.data)
+        })
+
+
+class PlaylistViewSet(viewsets.ModelViewSet):
+    """歌单视图集"""
+    serializer_class = PlaylistSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Playlist.objects.all()  # 需要定义queryset，但实际使用get_queryset过滤
+    
+    def get_queryset(self):
+        """只返回当前用户的歌单"""
+        return Playlist.objects.filter(user=self.request.user).prefetch_related('songs__song')
+    
+    def perform_create(self, serializer):
+        """创建歌单时自动设置用户"""
+        serializer.save(user=self.request.user)
+    
+    def get_renderers(self):
+        """根据Accept头选择渲染器，优先返回JSON"""
+        # 如果请求头明确要求JSON，只返回JSON渲染器
+        accept_header = self.request.META.get('HTTP_ACCEPT', '')
+        if 'application/json' in accept_header:
+            return [rest_framework.renderers.JSONRenderer()]
+        return super().get_renderers()
+    
+    def create(self, request, *args, **kwargs):
+        """重写create方法，确保返回JSON响应"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    
+    def update(self, request, *args, **kwargs):
+        """重写update方法，确保返回JSON响应"""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def add_song(self, request, pk=None):
+        """添加歌曲到歌单"""
+        playlist = self.get_object()
+        song_id = request.data.get('song_id')
+        
+        if not song_id:
+            return Response({'error': '缺少song_id参数'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            song = Song.objects.get(id=song_id)
+        except Song.DoesNotExist:
+            return Response({'error': '歌曲不存在'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # 检查是否已存在
+        if PlaylistSong.objects.filter(playlist=playlist, song=song).exists():
+            return Response({'error': '歌曲已在歌单中'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        playlist_song = PlaylistSong.objects.create(playlist=playlist, song=song)
+        serializer = PlaylistSongSerializer(playlist_song)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+    @action(detail=True, methods=['delete'])
+    def remove_song(self, request, pk=None):
+        """从歌单移除歌曲"""
+        playlist = self.get_object()
+        song_id = request.data.get('song_id')
+        
+        if not song_id:
+            return Response({'error': '缺少song_id参数'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            playlist_song = PlaylistSong.objects.get(playlist=playlist, song_id=song_id)
+            playlist_song.delete()
+            return Response({'message': '已从歌单移除'}, status=status.HTTP_200_OK)
+        except PlaylistSong.DoesNotExist:
+            return Response({'error': '歌曲不在歌单中'}, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=True, methods=['post'])
+    def move_song(self, request, pk=None):
+        """将歌曲移动到另一个歌单"""
+        playlist = self.get_object()
+        song_id = request.data.get('song_id')
+        target_playlist_id = request.data.get('target_playlist_id')
+        
+        if not song_id or not target_playlist_id:
+            return Response({'error': '缺少必要参数'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            target_playlist = Playlist.objects.get(id=target_playlist_id, user=request.user)
+        except Playlist.DoesNotExist:
+            return Response({'error': '目标歌单不存在'}, status=status.HTTP_404_NOT_FOUND)
+        
+        try:
+            playlist_song = PlaylistSong.objects.get(playlist=playlist, song_id=song_id)
+            song = playlist_song.song
+            
+            # 从原歌单删除
+            playlist_song.delete()
+            
+            # 添加到新歌单（如果不存在）
+            if not PlaylistSong.objects.filter(playlist=target_playlist, song=song).exists():
+                PlaylistSong.objects.create(playlist=target_playlist, song=song)
+            
+            return Response({'message': '歌曲已移动'}, status=status.HTTP_200_OK)
+        except PlaylistSong.DoesNotExist:
+            return Response({'error': '歌曲不在歌单中'}, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=False, methods=['post'])
+    def save_temp_list(self, request):
+        """将临时列表保存为歌单"""
+        playlist_name = request.data.get('name')
+        song_ids = request.data.get('song_ids', [])
+        
+        if not playlist_name:
+            return Response({'error': '缺少歌单名称'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 检查是否已存在同名歌单
+        if Playlist.objects.filter(user=request.user, name=playlist_name).exists():
+            return Response({'error': '歌单名称已存在'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 创建歌单
+        playlist = Playlist.objects.create(user=request.user, name=playlist_name)
+        
+        # 添加歌曲
+        songs = Song.objects.filter(id__in=song_ids)
+        for song in songs:
+            PlaylistSong.objects.create(playlist=playlist, song=song)
+        
+        serializer = self.get_serializer(playlist)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+# 用户认证视图
+def login_view(request):
+    """登录视图"""
+    if request.user.is_authenticated:
+        return redirect('index')
+    
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            next_url = request.GET.get('next', 'index')
+            return redirect(next_url)
+        else:
+            return render(request, 'mayday_app/login.html', {
+                'error': '用户名或密码错误'
+            })
+    
+    return render(request, 'mayday_app/login.html')
+
+
+def register_view(request):
+    """注册视图"""
+    if request.user.is_authenticated:
+        return redirect('index')
+    
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('index')
+    else:
+        form = UserCreationForm()
+    
+    return render(request, 'mayday_app/register.html', {'form': form})
+
+
+def logout_view(request):
+    """登出视图"""
+    logout(request)
+    return redirect('index')
+
+
+@login_required
+def playlist_list_view(request):
+    """歌单列表页面"""
+    playlists = Playlist.objects.filter(user=request.user).prefetch_related('songs')
+    return render(request, 'mayday_app/playlist_list.html', {
+        'playlists': playlists
+    })
+
+
+@login_required
+def playlist_detail_view(request, playlist_id):
+    """歌单详情页面"""
+    playlist = get_object_or_404(Playlist, id=playlist_id, user=request.user)
+    playlist_songs = playlist.songs.select_related('song', 'song__album').all()
+    return render(request, 'mayday_app/playlist_detail.html', {
+        'playlist': playlist,
+        'playlist_songs': playlist_songs
+    })
 

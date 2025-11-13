@@ -2,7 +2,7 @@
 Django管理后台配置
 """
 from django.contrib import admin
-from .models import Album, Song, Tour, TourVenue, Quote, Image
+from .models import Album, Song, Tour, TourVenue, Quote, Image, Playlist, PlaylistSong
 
 
 @admin.register(Album)
@@ -71,4 +71,37 @@ class ImageAdmin(admin.ModelAdmin):
     list_filter = ['date', 'album', 'tour']
     search_fields = ['title', 'caption']
     date_hierarchy = 'date'
+
+
+@admin.register(Playlist)
+class PlaylistAdmin(admin.ModelAdmin):
+    list_display = ['name', 'user', 'song_count', 'created_at']
+    list_filter = ['created_at', 'user']
+    search_fields = ['name', 'user__username']
+    date_hierarchy = 'created_at'
+    
+    def get_queryset(self, request):
+        """优化查询，预加载歌曲"""
+        qs = super().get_queryset(request)
+        return qs.prefetch_related('songs')
+    
+    def song_count(self, obj):
+        """获取歌曲数量"""
+        if hasattr(obj, '_prefetched_objects_cache') and 'songs' in obj._prefetched_objects_cache:
+            return len(obj._prefetched_objects_cache['songs'])
+        return obj.songs.count()
+    song_count.short_description = '歌曲数量'
+
+
+@admin.register(PlaylistSong)
+class PlaylistSongAdmin(admin.ModelAdmin):
+    list_display = ['playlist', 'song', 'added_at']
+    list_filter = ['added_at', 'playlist']
+    search_fields = ['playlist__name', 'song__title', 'song__artist']
+    date_hierarchy = 'added_at'
+    
+    def get_queryset(self, request):
+        """优化查询"""
+        qs = super().get_queryset(request)
+        return qs.select_related('playlist', 'song')
 

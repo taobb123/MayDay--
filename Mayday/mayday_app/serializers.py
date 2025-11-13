@@ -4,7 +4,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from rest_framework import serializers
-from .models import Album, Song, Tour, Quote, Image, TourVenue
+from .models import Album, Song, Tour, Quote, Image, TourVenue, Playlist, PlaylistSong
 
 if TYPE_CHECKING:
     from .interfaces import TimeTunnelItem
@@ -95,4 +95,40 @@ class TimelineItemSerializer(serializers.Serializer):
             'title': instance.get_title(),
             'content': instance.get_content(),
         }
+
+
+class PlaylistSongSerializer(serializers.ModelSerializer):
+    """歌单歌曲序列化器"""
+    song = SongSerializer(read_only=True)
+    song_id = serializers.IntegerField(write_only=True, required=False)
+    
+    class Meta:
+        model = PlaylistSong
+        fields = ['id', 'song', 'song_id', 'added_at']
+
+
+class PlaylistSerializer(serializers.ModelSerializer):
+    """歌单序列化器"""
+    songs = PlaylistSongSerializer(many=True, read_only=True, source='songs')
+    song_count = serializers.SerializerMethodField()
+    user = serializers.StringRelatedField(read_only=True)
+    
+    class Meta:
+        model = Playlist
+        fields = ['id', 'name', 'user', 'songs', 'song_count', 'created_at', 'updated_at']
+        read_only_fields = ['user', 'created_at', 'updated_at']
+    
+    def validate_name(self, value):
+        """验证歌单名称"""
+        if not value or not value.strip():
+            raise serializers.ValidationError('歌单名称不能为空')
+        if len(value.strip()) > 200:
+            raise serializers.ValidationError('歌单名称不能超过200个字符')
+        return value.strip()
+    
+    def get_song_count(self, obj):
+        """获取歌曲数量"""
+        if hasattr(obj, '_prefetched_objects_cache') and 'songs' in obj._prefetched_objects_cache:
+            return len(obj._prefetched_objects_cache['songs'])
+        return obj.songs.count()
 
