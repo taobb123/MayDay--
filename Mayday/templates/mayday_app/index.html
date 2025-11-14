@@ -26,9 +26,21 @@
             </div>
             {% if user.is_authenticated %}
             <div class="mt-2">
-                <a href="{% url 'playlist_list' %}" class="text-decoration-none">
-                    <i class="bi bi-music-note-list"></i> 我的歌单
-                </a>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span><i class="bi bi-music-note-list"></i> 我的歌单：</span>
+                    {% if playlists %}
+                        {% for playlist in playlists %}
+                        <a href="/playlist/{{ playlist.id }}/" class="text-decoration-none">
+                            {{ playlist.name }}
+                        </a>
+                        {% if not forloop.last %}<span class="text-muted">|</span>{% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <a href="{% url 'playlist_list' %}" class="text-decoration-none text-muted">
+                            暂无歌单，点击创建
+                        </a>
+                    {% endif %}
+                </div>
             </div>
             {% endif %}
         </div>

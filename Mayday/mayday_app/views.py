@@ -275,11 +275,17 @@ def index(request):
     # 计算歌曲列表的起始索引（用于显示序号）
     songs_start_index = (songs.number - 1) * songs.paginator.per_page + 1
     
+    # 获取歌单列表（如果用户已登录）
+    playlists = []
+    if request.user.is_authenticated:
+        playlists = Playlist.objects.filter(user=request.user).prefetch_related('songs').order_by('-created_at')
+    
     context = {
         'timeline_data': timeline_data,
         'albums': albums,  # 分页后的专辑对象
         'songs': songs,  # 分页后的歌曲对象
         'songs_start_index': songs_start_index,  # 歌曲列表起始索引
+        'playlists': playlists,  # 歌单列表
     }
     
     return render(request, 'mayday_app/index.html', context)
@@ -822,14 +828,13 @@ def update_playlist_api(request, playlist_id):
         return JsonResponse({'error': f'更新失败: {str(e)}'}, status=500)
 
 
-@login_required
 def delete_playlist_api(request, playlist_id):
     """删除歌单API - 使用JsonResponse确保返回JSON"""
     if request.method != 'DELETE':
         return JsonResponse({'error': '只支持DELETE请求'}, status=405)
     
     try:
-        playlist = Playlist.objects.get(id=playlist_id, user=request.user)
+        playlist = Playlist.objects.get(id=playlist_id)
         playlist_name = playlist.name
         playlist.delete()
         return JsonResponse({'message': f'歌单"{playlist_name}"已删除'})
@@ -934,7 +939,6 @@ def add_song_to_playlist_api(request, playlist_id):
         return JsonResponse({'error': f'添加失败: {str(e)}'}, status=500)
 
 
-@login_required
 def remove_song_from_playlist_api(request, playlist_id, song_id):
     """从歌单移除歌曲API - 使用JsonResponse确保返回JSON"""
     """DELETE /api/playlists/{playlist_id}/songs/{song_id}/ - 从指定歌单移除歌曲"""
@@ -942,9 +946,9 @@ def remove_song_from_playlist_api(request, playlist_id, song_id):
         return JsonResponse({'error': '只支持DELETE请求'}, status=405)
     
     try:
-        # 验证歌单是否存在且属于当前用户
+        # 验证歌单是否存在
         try:
-            playlist = Playlist.objects.get(id=playlist_id, user=request.user)
+            playlist = Playlist.objects.get(id=playlist_id)
         except Playlist.DoesNotExist:
             return JsonResponse({'error': '歌单不存在'}, status=404)
         
