@@ -554,6 +554,12 @@
                         <a href="{% url 'index' %}" class="text-decoration-none" style="color: var(--primary-color); font-weight: 500;">
                             <i class="bi bi-house"></i> 首页
                         </a>
+                        <a href="{% url 'index' %}#song-list" class="text-decoration-none" style="color: var(--primary-color); font-weight: 500;">
+                            <i class="bi bi-music-note-beamed"></i> 歌曲列表
+                        </a>
+                        <a href="{% url 'index' %}#timeline" class="text-decoration-none" style="color: var(--primary-color); font-weight: 500;">
+                            <i class="bi bi-clock-history"></i> 时间隧道
+                        </a>
                         {% if user.is_authenticated %}
                         <a href="{% url 'playlist_list' %}" class="text-decoration-none" style="color: var(--primary-color); font-weight: 500;">
                             <i class="bi bi-music-note-list"></i> 我的歌单
@@ -2285,6 +2291,14 @@
                 }
             }
             return cookieValue;
+        }
+        
+        // 滚动到页面顶部
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
         }
     </script>
     {% block extra_js %}{% endblock %}
