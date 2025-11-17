@@ -149,64 +149,6 @@
         {% endif %}
     </div>
     
-    <!-- 时间线 -->
-    <div class="mb-5" id="timeline">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="mb-0"><i class="bi bi-clock-history"></i> 时间隧道</h2>
-            <a href="#albums" class="text-decoration-none" style="color: var(--primary-color); font-weight: 500;">
-                <i class="bi bi-arrow-up-circle"></i> 回到过去
-            </a>
-        </div>
-        <div class="timeline">
-            {% for item in timeline_data %}
-            <div class="timeline-item {{ item.type }}">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <div class="d-flex align-items-center mb-2">
-                            {% if item.type == 'album' %}
-                            <i class="bi bi-vinyl-fill text-primary me-2"></i>
-                            {% elif item.type == 'tour' %}
-                            <i class="bi bi-music-player-fill text-warning me-2"></i>
-                            {% elif item.type == 'quote' %}
-                            <i class="bi bi-chat-quote-fill text-success me-2"></i>
-                            {% elif item.type == 'image' %}
-                            <i class="bi bi-image-fill text-danger me-2"></i>
-                            {% endif %}
-                            <h5 class="mb-0">{{ item.title }}</h5>
-                        </div>
-                        <p class="text-muted mb-2">
-                            <i class="bi bi-calendar3"></i> {{ item.date|date:"Y年m月d日" }}
-                        </p>
-                        {% if item.type == 'album' and item.content.cover_image %}
-                        <img src="{{ item.content.cover_image }}" alt="{{ item.title }}" 
-                             class="img-fluid rounded mb-2" style="max-width: 200px;">
-                        {% endif %}
-                        {% if item.type == 'quote' %}
-                        <blockquote class="blockquote">
-                            <p>{{ item.content.text }}</p>
-                            {% if item.content.author %}
-                            <footer class="blockquote-footer">{{ item.content.author }}</footer>
-                            {% endif %}
-                        </blockquote>
-                        {% endif %}
-                        {% if item.type == 'image' and item.content.image_url %}
-                        <img src="{{ item.content.image_url }}" alt="{{ item.title }}" 
-                             class="img-fluid rounded mb-2" style="max-height: 300px;">
-                        {% endif %}
-                        {% if item.content.description %}
-                        <p>{{ item.content.description|truncatewords:30 }}</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            {% empty %}
-            <div class="text-center text-muted">
-                <p>时间线为空，请添加内容</p>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    
     <!-- 最近歌曲 -->
     <div class="mb-5" id="song-list">
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -322,6 +264,104 @@ const container = document.querySelector('.container-fluid');
 const USER_AUTHENTICATED = container && container.dataset.userAuthenticated === 'true';
 let searchTimeout = null;
 
+// 收集当前歌曲列表的所有歌曲
+function collectCurrentSongList() {
+    const songList = [];
+    const songTable = document.querySelector('#song-list tbody');
+    
+    if (!songTable) {
+        console.log('未找到歌曲列表表格');
+        return songList;
+    }
+    
+    // 从表格中获取所有播放按钮
+    const playButtons = songTable.querySelectorAll('.play-song-btn');
+    
+    playButtons.forEach(btn => {
+        const playUrl = btn.dataset.playUrl;
+        const title = btn.dataset.songTitle;
+        const artist = btn.dataset.songArtist;
+        const songId = parseInt(btn.dataset.songId);
+        
+        if (playUrl && title && artist && songId) {
+            songList.push({
+                url: playUrl,
+                title: title,
+                artist: artist,
+                id: songId
+            });
+        }
+    });
+    
+    console.log(`收集到 ${songList.length} 首歌曲`);
+    return songList;
+}
+
+// 收集搜索结果列表的所有歌曲
+function collectSearchResultList() {
+    const songList = [];
+    const searchResultsTable = document.querySelector('#searchResultsContent tbody');
+    
+    if (!searchResultsTable) {
+        return songList;
+    }
+    
+    // 从搜索结果表格中获取所有行
+    const rows = searchResultsTable.querySelectorAll('tr');
+    
+    rows.forEach(row => {
+        const playButton = row.querySelector('button[onclick*="handlePlaySong"]');
+        if (playButton) {
+            const onclick = playButton.getAttribute('onclick');
+            // 匹配 handlePlaySong 函数调用
+            const match = onclick.match(/handlePlaySong\('([^']+)',\s*'([^']+)',\s*'([^']+)',\s*(\d+)/);
+            if (match) {
+                songList.push({
+                    url: match[1],
+                    title: match[2].replace(/\\'/g, "'").replace(/&quot;/g, '"'),
+                    artist: match[3].replace(/\\'/g, "'").replace(/&quot;/g, '"'),
+                    id: parseInt(match[4])
+                });
+            }
+        }
+    });
+    
+    console.log(`从搜索结果收集到 ${songList.length} 首歌曲`);
+    return songList;
+}
+
+// 统一的播放处理函数（支持自动添加列表到播放器）
+function handlePlaySong(playUrl, title, artist, songId, source = 'main') {
+    // 如果用户已登录，自动将当前列表添加到播放器
+    if (USER_AUTHENTICATED) {
+        let currentList = [];
+        
+        // 根据来源选择不同的列表收集方式
+        if (source === 'search') {
+            currentList = collectSearchResultList();
+        } else {
+            currentList = collectCurrentSongList();
+        }
+        
+        if (currentList.length > 0) {
+            // 找到当前点击的歌曲在列表中的索引
+            const clickedIndex = currentList.findIndex(song => song.id === songId);
+            const startIndex = clickedIndex >= 0 ? clickedIndex : 0;
+            
+            // 设置播放列表
+            if (typeof window.setPlaylist === 'function') {
+                window.setPlaylist(currentList, startIndex);
+                console.log(`已设置播放列表: ${currentList.length} 首歌曲，从第 ${startIndex + 1} 首开始`);
+            } else {
+                console.warn('setPlaylist 函数未找到，无法设置播放列表');
+            }
+        }
+    }
+    
+    // 播放选中的歌曲
+    playSong(playUrl, title, artist, songId);
+}
+
 // 事件委托：处理播放按钮点击
 document.addEventListener('click', function(e) {
     if (e.target.closest('.play-song-btn')) {
@@ -330,7 +370,9 @@ document.addEventListener('click', function(e) {
         const title = btn.dataset.songTitle;
         const artist = btn.dataset.songArtist;
         const songId = parseInt(btn.dataset.songId);
-        playSong(playUrl, title, artist, songId);
+        
+        // 使用统一的播放处理函数
+        handlePlaySong(playUrl, title, artist, songId, 'main');
     }
     
 });
@@ -379,7 +421,7 @@ function performSearch() {
                             <td>
                                 <div class="btn-group" role="group">
                                     <button class="btn btn-sm btn-primary" 
-                                            onclick="playSong('/play/${song.id}/', '${titleEscaped}', '${artistEscaped}', ${song.id})">
+                                            onclick="handlePlaySong('/play/${song.id}/', '${titleEscaped}', '${artistEscaped}', ${song.id}, 'search')">
                                         <i class="bi bi-play-fill"></i> 播放
                                     </button>
                                     ${USER_AUTHENTICATED ? `
@@ -679,6 +721,80 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
+// URL自动定位功能：根据URL参数自动滚动到对应模块
+function autoScrollToSection() {
+    // 获取URL参数
+    const urlParams = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    
+    let targetSection = null;
+    
+    // 优先检查URL hash
+    if (hash) {
+        // 移除#号
+        const hashId = hash.substring(1);
+        if (hashId === 'song-list' || hashId === 'albums') {
+            targetSection = document.getElementById(hashId);
+        }
+    }
+    
+    // 如果没有hash，根据URL参数决定
+    if (!targetSection) {
+        if (urlParams.has('song_page')) {
+            targetSection = document.getElementById('song-list');
+        } else if (urlParams.has('album_page')) {
+            targetSection = document.getElementById('albums');
+        }
+    }
+    
+    // 如果找到了目标区域，滚动到该位置
+    if (targetSection) {
+        // 等待页面内容加载完成后再滚动
+        setTimeout(() => {
+            targetSection.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }, 100);
+    }
+}
+
+// 优化分页链接：为分页链接自动添加hash
+function enhancePaginationLinks() {
+    // 为专辑分页链接添加 #albums hash
+    const albumPaginationLinks = document.querySelectorAll('#albums .pagination a.page-link');
+    albumPaginationLinks.forEach(link => {
+        if (link.href && !link.href.includes('#')) {
+            // 如果链接还没有hash，添加 #albums
+            link.href = link.href + '#albums';
+        }
+    });
+    
+    // 为歌曲分页链接添加 #song-list hash
+    const songPaginationLinks = document.querySelectorAll('#song-list .pagination a.page-link');
+    songPaginationLinks.forEach(link => {
+        if (link.href && !link.href.includes('#')) {
+            // 如果链接还没有hash，添加 #song-list
+            link.href = link.href + '#song-list';
+        }
+    });
+}
+
+// 页面加载完成后执行自动定位和链接优化
+(function() {
+    function init() {
+        enhancePaginationLinks();
+        autoScrollToSection();
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        // 页面已经加载完成，直接执行
+        setTimeout(init, 100);
+    }
+})();
 </script>
 {% endblock %}
 

@@ -105,7 +105,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Music directory path
-MUSIC_DIRECTORY = r'D:\Music\各种音乐榜单\周杰伦[2000-2022]录音室专辑+EP合集[4.76GB]\2022-最伟大的作品'
+MUSIC_DIRECTORY = r'D:\Music\各种音乐榜单\网易云音乐热歌榜'
 
 # Lyrics directory path
 LYRICS_DIRECTORY = r'C:\Lyrics'

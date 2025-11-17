@@ -245,9 +245,6 @@ class TimelineView(APIView):
 
 def index(request):
     """主页视图"""
-    timeline_repo = TimelineRepository()
-    timeline_data = timeline_repo.get_timeline_data()
-    
     # 应用分页：使用 AlbumPagination 的配置
     albums_queryset = Album.objects.all().order_by('-release_date').prefetch_related('songs')  # 按发布日期倒序，预加载歌曲
     albums_paginator = Paginator(albums_queryset, AlbumPagination.page_size)  # 使用 AlbumPagination 的 page_size
@@ -281,7 +278,6 @@ def index(request):
         playlists = Playlist.objects.filter(user=request.user).prefetch_related('songs').order_by('-created_at')
     
     context = {
-        'timeline_data': timeline_data,
         'albums': albums,  # 分页后的专辑对象
         'songs': songs,  # 分页后的歌曲对象
         'songs_start_index': songs_start_index,  # 歌曲列表起始索引
