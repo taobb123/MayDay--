@@ -507,11 +507,25 @@ class ArtistsByInitialView(APIView):
                 if pinyin:
                     initial = pinyin[0].upper()
                 else:
-                    # 如果是英文，直接取首字母
-                    initial = artist[0].upper() if artist else ''
+                    # 如果拼音字段也为空，使用pypinyin实时生成
+                    try:
+                        from pypinyin import lazy_pinyin, Style
+                        pinyin_list = lazy_pinyin(artist, style=Style.NORMAL)
+                        if pinyin_list and pinyin_list[0]:
+                            # 获取第一个字符的拼音首字母
+                            initial = pinyin_list[0][0].upper() if pinyin_list[0] else ''
+                        else:
+                            # 如果是英文，直接取首字母
+                            initial = artist[0].upper() if artist else ''
+                    except ImportError:
+                        # 如果pypinyin未安装，对于英文直接取首字母，中文归类到"#"
+                        if artist and artist[0].isalpha():
+                            initial = artist[0].upper()
+                        else:
+                            initial = '#'
             
             # 确保首字母是A-Z
-            if initial and initial.isalpha():
+            if initial and initial.isalpha() and initial.isascii():
                 initial = initial.upper()
             else:
                 # 如果不是字母，归类到"#"

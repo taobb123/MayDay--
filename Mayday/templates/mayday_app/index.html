@@ -3,8 +3,19 @@
 {% block content %}
 <div class="container-fluid" data-user-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
     <!-- 搜索和操作按钮 -->
-    <div class="mb-4 d-flex justify-content-between align-items-center">
-        <div class="flex-grow-1 me-3">
+    <div class="mb-4">
+        <!-- 操作按钮行：右对齐 -->
+        <div class="d-flex justify-content-end gap-2 mb-3">
+            <button class="btn btn-primary" onclick="showArtistsModal()" title="按首字母浏览歌手">
+                <i class="bi bi-person-lines-fill"></i> 歌手
+            </button>
+            <button class="btn btn-scan" onclick="scanMusic()">
+                <i class="bi bi-folder2-open"></i> 扫描音乐
+            </button>
+        </div>
+        
+        <!-- 搜索栏行：占据整行 -->
+        <div>
             <div class="input-group">
                 <div class="btn-group" role="group">
                     <input type="radio" class="btn-check" name="searchMode" id="searchModeSong" value="song" checked>
@@ -81,14 +92,6 @@
             </div>
         </div>
         {% endif %}
-        <div class="d-flex gap-2">
-            <button class="btn btn-primary" onclick="showArtistsModal()" title="按首字母浏览歌手">
-                <i class="bi bi-person-lines-fill"></i> 歌手
-            </button>
-            <button class="btn btn-scan" onclick="scanMusic()">
-                <i class="bi bi-folder2-open"></i> 扫描音乐
-            </button>
-        </div>
     </div>
     
     <!-- 歌手列表模态框 -->
@@ -100,6 +103,10 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- 字母导航栏 -->
+                    <div id="alphabetNav" class="mb-3 p-2 bg-light rounded d-flex flex-wrap justify-content-center gap-1" style="display: none !important;">
+                        <!-- 26个字母导航按钮将通过JavaScript动态生成 -->
+                    </div>
                     <div id="artistsModalContent" style="max-height: 600px; overflow-y: auto;">
                         <p class="text-muted text-center">加载中...</p>
                     </div>
@@ -490,12 +497,14 @@ function performSongSearch(query) {
                             <td>
                                 <div class="btn-group" role="group">
                                     <button class="btn btn-sm btn-primary" 
-                                            onclick="handlePlaySong('/play/${song.id}/', '${titleEscaped}', '${artistEscaped}', ${song.id}, 'search')">
-                                        <i class="bi bi-play-fill"></i> 播放
+                                            onclick="handlePlaySong('/play/${song.id}/', '${titleEscaped}', '${artistEscaped}', ${song.id}, 'search')"
+                                            style="white-space: nowrap;">
+                                        <i class="bi bi-play-fill"></i><span>播放</span>
                                     </button>
                                     ${USER_AUTHENTICATED ? `
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="showPlaylistModal(${song.id})">
-                                        <i class="bi bi-list-ul"></i> 歌单
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="showPlaylistModal(${song.id})"
+                                            style="white-space: nowrap;">
+                                        <i class="bi bi-list-ul"></i><span>歌单</span>
                                     </button>
                                     ` : ''}
                                 </div>
@@ -579,12 +588,14 @@ function searchArtistSongs(artist) {
                             <td>
                                 <div class="btn-group" role="group">
                                     <button class="btn btn-sm btn-primary" 
-                                            onclick="handlePlaySong('/play/${song.id}/', '${titleEscaped}', '${artistEscaped}', ${song.id}, 'search')">
-                                        <i class="bi bi-play-fill"></i> 播放
+                                            onclick="handlePlaySong('/play/${song.id}/', '${titleEscaped}', '${artistEscaped}', ${song.id}, 'search')"
+                                            style="white-space: nowrap;">
+                                        <i class="bi bi-play-fill"></i><span>播放</span>
                                     </button>
                                     ${USER_AUTHENTICATED ? `
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="showPlaylistModal(${song.id})">
-                                        <i class="bi bi-list-ul"></i> 歌单
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="showPlaylistModal(${song.id})"
+                                            style="white-space: nowrap;">
+                                        <i class="bi bi-list-ul"></i><span>歌单</span>
                                     </button>
                                     ` : ''}
                                 </div>
@@ -615,7 +626,9 @@ function closeSearchResults() {
 // 显示歌手列表模态框
 function showArtistsModal() {
     const modalContent = document.getElementById('artistsModalContent');
+    const alphabetNav = document.getElementById('alphabetNav');
     modalContent.innerHTML = '<p class="text-muted text-center">加载中...</p>';
+    alphabetNav.style.display = 'none';
     
     // 显示模态框
     const modalElement = document.getElementById('artistsModal');
@@ -627,6 +640,42 @@ function showArtistsModal() {
         .then(response => response.json())
         .then(data => {
             if (data.artists_by_initial && Object.keys(data.artists_by_initial).length > 0) {
+                // 生成26个字母导航栏
+                const availableInitials = new Set(data.initials || []);
+                let navHtml = '';
+                const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+                
+                letters.forEach(letter => {
+                    const hasData = availableInitials.has(letter);
+                    const btnClass = hasData ? 'btn-primary' : 'btn-outline-secondary';
+                    const disabled = hasData ? '' : 'disabled';
+                    navHtml += `
+                        <button type="button" class="btn btn-sm ${btnClass} ${disabled}" 
+                                onclick="scrollToInitial('${letter}')" 
+                                data-initial="${letter}"
+                                style="min-width: 35px;"
+                                ${disabled ? 'disabled' : ''}>
+                            ${letter}
+                        </button>
+                    `;
+                });
+                
+                // 如果有"#"分类，也添加到导航栏
+                if (availableInitials.has('#')) {
+                    navHtml += `
+                        <button type="button" class="btn btn-sm btn-primary" 
+                                onclick="scrollToInitial('#')" 
+                                data-initial="#"
+                                style="min-width: 35px;">
+                            #
+                        </button>
+                    `;
+                }
+                
+                alphabetNav.innerHTML = navHtml;
+                alphabetNav.style.display = 'flex';
+                
+                // 生成歌手列表
                 let html = '<div class="artists-by-initial">';
                 
                 // 按首字母显示歌手（滚动列表）
@@ -657,12 +706,48 @@ function showArtistsModal() {
                 modalContent.innerHTML = html;
             } else {
                 modalContent.innerHTML = '<p class="text-muted text-center">暂无歌手数据</p>';
+                alphabetNav.style.display = 'none';
             }
         })
         .catch(error => {
             console.error('加载歌手列表失败:', error);
             modalContent.innerHTML = '<p class="text-danger text-center">加载失败，请重试</p>';
+            alphabetNav.style.display = 'none';
         });
+}
+
+// 滚动到指定首字母区域
+function scrollToInitial(initial) {
+    const targetElement = document.getElementById(`initial-${initial}`);
+    const modalContent = document.getElementById('artistsModalContent');
+    
+    if (targetElement && modalContent) {
+        // 计算目标元素相对于滚动容器的位置
+        const containerRect = modalContent.getBoundingClientRect();
+        const targetRect = targetElement.getBoundingClientRect();
+        const scrollTop = modalContent.scrollTop;
+        const targetOffset = targetRect.top - containerRect.top + scrollTop;
+        
+        // 平滑滚动到目标位置，留出一些顶部间距
+        modalContent.scrollTo({
+            top: targetOffset - 20,
+            behavior: 'smooth'
+        });
+        
+        // 高亮显示当前字母
+        const navButtons = document.querySelectorAll('#alphabetNav button');
+        navButtons.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-initial') === initial) {
+                btn.classList.add('active');
+                // 添加视觉反馈
+                btn.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    btn.style.transform = '';
+                }, 200);
+            }
+        });
+    }
 }
 
 // 选择歌手并搜索其歌曲

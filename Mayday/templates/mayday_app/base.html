@@ -503,6 +503,70 @@
             font-size: 12px;
         }
         
+        /* 搜索结果表格按钮样式优化 */
+        #searchResults .btn-group .btn {
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            min-width: fit-content;
+            line-height: 1.4;
+        }
+        
+        #searchResults .btn-group .btn i {
+            font-size: 14px;
+            line-height: 1;
+            flex-shrink: 0;
+            display: inline-block;
+        }
+        
+        #searchResults .btn-group .btn span {
+            display: inline-block;
+            white-space: nowrap;
+        }
+        
+        #searchResults .btn-group .btn-primary {
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            border: none;
+            color: white;
+            box-shadow: 0 2px 4px rgba(74, 144, 226, 0.3);
+        }
+        
+        #searchResults .btn-group .btn-primary:hover {
+            background: linear-gradient(135deg, #357abd 0%, #2a5f8f 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(74, 144, 226, 0.4);
+        }
+        
+        #searchResults .btn-group .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(74, 144, 226, 0.3);
+        }
+        
+        #searchResults .btn-group .btn-outline-secondary {
+            border: 1.5px solid #6c757d;
+            color: #6c757d;
+            background: white;
+        }
+        
+        #searchResults .btn-group .btn-outline-secondary:hover {
+            background: #6c757d;
+            color: white;
+            border-color: #6c757d;
+            transform: translateY(-1px);
+        }
+        
+        #searchResults .btn-group {
+            display: inline-flex;
+            gap: 6px;
+        }
+        
         /* 页面内容区域间距优化 */
         .container-fluid {
             padding: 0 10px;
