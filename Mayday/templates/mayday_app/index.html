@@ -81,10 +81,33 @@
             </div>
         </div>
         {% endif %}
-        <div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary" onclick="showArtistsModal()" title="按首字母浏览歌手">
+                <i class="bi bi-person-lines-fill"></i> 歌手
+            </button>
             <button class="btn btn-scan" onclick="scanMusic()">
                 <i class="bi bi-folder2-open"></i> 扫描音乐
             </button>
+        </div>
+    </div>
+    
+    <!-- 歌手列表模态框 -->
+    <div class="modal fade" id="artistsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-person-lines-fill"></i> 按首字母浏览歌手</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="artistsModalContent" style="max-height: 600px; overflow-y: auto;">
+                        <p class="text-muted text-center">加载中...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -587,6 +610,72 @@ function searchArtistSongs(artist) {
 function closeSearchResults() {
     document.getElementById('searchResults').style.display = 'none';
     document.getElementById('searchInput').value = '';
+}
+
+// 显示歌手列表模态框
+function showArtistsModal() {
+    const modalContent = document.getElementById('artistsModalContent');
+    modalContent.innerHTML = '<p class="text-muted text-center">加载中...</p>';
+    
+    // 显示模态框
+    const modalElement = document.getElementById('artistsModal');
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    
+    // 加载歌手列表
+    fetch('/api/artists/by-initial/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.artists_by_initial && Object.keys(data.artists_by_initial).length > 0) {
+                let html = '<div class="artists-by-initial">';
+                
+                // 按首字母显示歌手（滚动列表）
+                data.initials.forEach(initial => {
+                    const artists = data.artists_by_initial[initial];
+                    if (artists && artists.length > 0) {
+                        html += `<div id="initial-${initial}" class="mb-4">`;
+                        html += `<h5 class="text-primary mb-3"><i class="bi bi-bookmark-fill"></i> ${initial}</h5>`;
+                        html += '<div class="list-group">';
+                        
+                        artists.forEach(artist => {
+                            html += `
+                                <button type="button" class="list-group-item list-group-item-action" 
+                                        onclick="selectArtist('${escapeHtml(artist)}')">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-person-circle me-2" style="font-size: 1.2rem; color: var(--primary-color);"></i>
+                                        <span class="fw-bold">${escapeHtml(artist)}</span>
+                                    </div>
+                                </button>
+                            `;
+                        });
+                        
+                        html += '</div></div>';
+                    }
+                });
+                
+                html += '</div>';
+                modalContent.innerHTML = html;
+            } else {
+                modalContent.innerHTML = '<p class="text-muted text-center">暂无歌手数据</p>';
+            }
+        })
+        .catch(error => {
+            console.error('加载歌手列表失败:', error);
+            modalContent.innerHTML = '<p class="text-danger text-center">加载失败，请重试</p>';
+        });
+}
+
+// 选择歌手并搜索其歌曲
+function selectArtist(artist) {
+    // 关闭歌手模态框
+    const modalElement = document.getElementById('artistsModal');
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    if (modal) {
+        modal.hide();
+    }
+    
+    // 搜索该歌手的歌曲
+    searchArtistSongs(artist);
 }
 
 // 显示选择歌单模态框

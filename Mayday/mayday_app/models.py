@@ -62,6 +62,8 @@ class Song(models.Model):
     """歌曲模型 - 实现SongInterface"""
     title = models.CharField(max_length=200, verbose_name='歌曲标题')
     artist = models.CharField(max_length=100, default='五月天', verbose_name='艺术家')
+    artist_pinyin = models.CharField(max_length=255, blank=True, verbose_name='歌手拼音')
+    artist_initial = models.CharField(max_length=1, blank=True, verbose_name='歌手首字母')
     album = models.ForeignKey(Album, on_delete=models.CASCADE, related_name='songs', null=True, blank=True, verbose_name='专辑')
     file_path = models.FileField(
         upload_to='songs/',
@@ -100,6 +102,36 @@ class Song(models.Model):
     
     def get_duration(self) -> Optional[float]:
         return self.duration
+    
+    def save(self, *args, **kwargs):
+        """保存时自动填充拼音字段"""
+        # 如果拼音字段为空，自动生成
+        if not self.artist_pinyin or not self.artist_initial:
+            try:
+                from pypinyin import lazy_pinyin, Style
+                
+                if self.artist:
+                    # 生成拼音
+                    pinyin_list = lazy_pinyin(self.artist, style=Style.NORMAL)
+                    pinyin = ''.join(pinyin_list)
+                    
+                    # 获取首字母
+                    if pinyin:
+                        initial = pinyin[0].upper()
+                    else:
+                        # 如果是英文，直接取首字母
+                        initial = self.artist[0].upper() if self.artist else ''
+                    
+                    # 只更新空字段
+                    if not self.artist_pinyin:
+                        self.artist_pinyin = pinyin
+                    if not self.artist_initial:
+                        self.artist_initial = initial
+            except ImportError:
+                # 如果pypinyin未安装，跳过
+                pass
+        
+        super().save(*args, **kwargs)
 
 
 class Tour(models.Model):

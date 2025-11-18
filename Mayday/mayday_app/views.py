@@ -483,6 +483,68 @@ class ArtistSongsView(APIView):
         })
 
 
+class ArtistsByInitialView(APIView):
+    """获取按拼音首字母分组的歌手列表"""
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        """返回按首字母分组的歌手列表"""
+        # 获取所有不重复的歌手，包含拼音信息
+        artists_data = Song.objects.values('artist', 'artist_pinyin', 'artist_initial').distinct()
+        
+        # 按首字母分组
+        artists_by_initial = {}
+        for item in artists_data:
+            artist = item['artist']
+            if not artist:
+                continue
+            
+            # 获取首字母，如果没有则尝试生成
+            initial = item['artist_initial'] or ''
+            if not initial:
+                # 如果没有首字母，尝试从拼音获取
+                pinyin = item['artist_pinyin'] or ''
+                if pinyin:
+                    initial = pinyin[0].upper()
+                else:
+                    # 如果是英文，直接取首字母
+                    initial = artist[0].upper() if artist else ''
+            
+            # 确保首字母是A-Z
+            if initial and initial.isalpha():
+                initial = initial.upper()
+            else:
+                # 如果不是字母，归类到"#"
+                initial = '#'
+            
+            if initial not in artists_by_initial:
+                artists_by_initial[initial] = []
+            
+            # 避免重复添加
+            if artist not in artists_by_initial[initial]:
+                artists_by_initial[initial].append(artist)
+        
+        # 对每个首字母下的歌手进行排序
+        for initial in artists_by_initial:
+            artists_by_initial[initial].sort()
+        
+        # 按首字母排序（A-Z，#放在最后）
+        sorted_initials = sorted([k for k in artists_by_initial.keys() if k != '#'])
+        if '#' in artists_by_initial:
+            sorted_initials.append('#')
+        
+        # 构建返回数据
+        result = {}
+        for initial in sorted_initials:
+            result[initial] = artists_by_initial[initial]
+        
+        return Response({
+            'artists_by_initial': result,
+            'initials': sorted_initials,
+            'total_artists': sum(len(artists) for artists in artists_by_initial.values())
+        })
+
+
 class PlaylistViewSet(viewsets.ModelViewSet):
     """歌单视图集"""
     serializer_class = PlaylistSerializer

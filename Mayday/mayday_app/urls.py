@@ -30,6 +30,7 @@ urlpatterns = [
     path('api/search/', views.SearchView.as_view(), name='search'),
     path('api/search/artists/', views.ArtistSearchView.as_view(), name='artist_search'),
     path('api/search/artist-songs/', views.ArtistSongsView.as_view(), name='artist_songs'),
+    path('api/artists/by-initial/', views.ArtistsByInitialView.as_view(), name='artists_by_initial'),
     
     # 用户认证路由
     path('login/', views.login_view, name='login'),

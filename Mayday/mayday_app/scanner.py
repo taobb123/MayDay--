@@ -11,6 +11,30 @@ from django.conf import settings
 from .interfaces import MusicScannerInterface
 from .models import Song, Album
 
+def _generate_pinyin_fields(artist: str) -> tuple[str, str]:
+    """生成歌手的拼音和首字母"""
+    try:
+        from pypinyin import lazy_pinyin, Style
+        
+        if not artist:
+            return '', ''
+        
+        # 生成拼音
+        pinyin_list = lazy_pinyin(artist, style=Style.NORMAL)
+        pinyin = ''.join(pinyin_list)
+        
+        # 获取首字母
+        if pinyin:
+            initial = pinyin[0].upper()
+        else:
+            # 如果是英文，直接取首字母
+            initial = artist[0].upper() if artist else ''
+        
+        return pinyin, initial
+    except ImportError:
+        # 如果pypinyin未安装，返回空字符串
+        return '', ''
+
 if TYPE_CHECKING:
     from .interfaces import SongInterface
 
@@ -157,10 +181,16 @@ class MusicScanner(MusicScannerInterface):
                 
                 song = query.first()
             
+            artist = metadata.get('artist', '五月天')
+            # 生成拼音字段
+            artist_pinyin, artist_initial = _generate_pinyin_fields(artist)
+            
             if song:
                 # 更新现有记录
                 song.title = metadata.get('title', file_path.stem)
-                song.artist = metadata.get('artist', '五月天')
+                song.artist = artist
+                song.artist_pinyin = artist_pinyin
+                song.artist_initial = artist_initial
                 song.album = album
                 song.duration = metadata.get('duration')
                 song.track_number = metadata.get('track_number')
@@ -170,7 +200,9 @@ class MusicScanner(MusicScannerInterface):
                 # 创建新记录
                 song = Song.objects.create(
                     title=metadata.get('title', file_path.stem),
-                    artist=metadata.get('artist', '五月天'),
+                    artist=artist,
+                    artist_pinyin=artist_pinyin,
+                    artist_initial=artist_initial,
                     album=album,
                     duration=metadata.get('duration'),
                     track_number=metadata.get('track_number'),
