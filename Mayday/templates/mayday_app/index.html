@@ -6,6 +6,17 @@
     <div class="mb-4 d-flex justify-content-between align-items-center">
         <div class="flex-grow-1 me-3">
             <div class="input-group">
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="searchMode" id="searchModeSong" value="song" checked>
+                    <label class="btn btn-outline-secondary" for="searchModeSong" title="搜索歌曲">
+                        <i class="bi bi-music-note"></i> 歌曲
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="searchMode" id="searchModeArtist" value="artist">
+                    <label class="btn btn-outline-secondary" for="searchModeArtist" title="搜索歌手">
+                        <i class="bi bi-person"></i> 歌手
+                    </label>
+                </div>
                 <input type="text" class="form-control" id="searchInput" placeholder="搜索歌曲或作者..." onkeyup="handleSearchKeyup(event)">
                 <button class="btn btn-outline-primary" onclick="performSearch()">
                     <i class="bi bi-search"></i> 搜索
@@ -385,12 +396,34 @@ function handleSearchKeyup(event) {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             const query = event.target.value.trim();
-            if (query.length >= 2) {
+            const searchMode = document.querySelector('input[name="searchMode"]:checked').value;
+            // 歌手搜索支持单个字符（首字母搜索），歌曲搜索需要至少2个字符
+            const minLength = searchMode === 'artist' ? 1 : 2;
+            if (query.length >= minLength) {
                 performSearch();
             }
         }, 500);
     }
 }
+
+// 监听搜索模式切换
+document.addEventListener('DOMContentLoaded', function() {
+    const searchModeInputs = document.querySelectorAll('input[name="searchMode"]');
+    const searchInput = document.getElementById('searchInput');
+    
+    searchModeInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            // 更新搜索框占位符
+            if (this.value === 'artist') {
+                searchInput.placeholder = '搜索歌手名称或首字母...';
+            } else {
+                searchInput.placeholder = '搜索歌曲或作者...';
+            }
+            // 清空搜索结果
+            closeSearchResults();
+        });
+    });
+});
 
 function performSearch() {
     const query = document.getElementById('searchInput').value.trim();
@@ -399,6 +432,19 @@ function performSearch() {
         return;
     }
     
+    // 获取搜索模式
+    const searchMode = document.querySelector('input[name="searchMode"]:checked').value;
+    
+    if (searchMode === 'artist') {
+        // 搜索歌手
+        performArtistSearch(query);
+    } else {
+        // 搜索歌曲
+        performSongSearch(query);
+    }
+}
+
+function performSongSearch(query) {
     fetch(`/api/search/?q=${encodeURIComponent(query)}`)
         .then(response => response.json())
         .then(data => {
@@ -445,6 +491,95 @@ function performSearch() {
         })
         .catch(error => {
             console.error('Search error:', error);
+            alert('搜索失败');
+        });
+}
+
+function performArtistSearch(query) {
+    fetch(`/api/search/artists/?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            const resultsDiv = document.getElementById('searchResults');
+            const contentDiv = document.getElementById('searchResultsContent');
+            
+            if (data.artists && data.artists.length > 0) {
+                let html = '<div class="list-group">';
+                
+                data.artists.forEach(artist => {
+                    html += `
+                        <button type="button" class="list-group-item list-group-item-action" 
+                                onclick="searchArtistSongs('${escapeHtml(artist)}')">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-person-circle me-2" style="font-size: 1.5rem;"></i>
+                                <span class="fw-bold">${escapeHtml(artist)}</span>
+                            </div>
+                        </button>
+                    `;
+                });
+                
+                html += '</div>';
+                contentDiv.innerHTML = html;
+                resultsDiv.style.display = 'block';
+            } else {
+                contentDiv.innerHTML = '<p class="text-muted text-center">没有找到相关歌手</p>';
+                resultsDiv.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Artist search error:', error);
+            alert('搜索失败');
+        });
+}
+
+function searchArtistSongs(artist) {
+    // 搜索该歌手的歌曲
+    fetch(`/api/search/artist-songs/?artist=${encodeURIComponent(artist)}`)
+        .then(response => response.json())
+        .then(data => {
+            const resultsDiv = document.getElementById('searchResults');
+            const contentDiv = document.getElementById('searchResultsContent');
+            
+            if (data.results && data.results.length > 0) {
+                let html = `<div class="mb-3"><h5><i class="bi bi-person-circle"></i> ${escapeHtml(artist)} 的歌曲 (${data.count}首)</h5></div>`;
+                html += '<table class="table table-hover">';
+                html += '<thead><tr><th>歌曲</th><th>艺术家</th><th>专辑</th><th>操作</th></tr></thead>';
+                html += '<tbody>';
+                
+                data.results.forEach(song => {
+                    const titleEscaped = song.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    const artistEscaped = song.artist.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    html += `
+                        <tr>
+                            <td>${song.title}</td>
+                            <td>${song.artist}</td>
+                            <td>${song.album_name || '-'}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-primary" 
+                                            onclick="handlePlaySong('/play/${song.id}/', '${titleEscaped}', '${artistEscaped}', ${song.id}, 'search')">
+                                        <i class="bi bi-play-fill"></i> 播放
+                                    </button>
+                                    ${USER_AUTHENTICATED ? `
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="showPlaylistModal(${song.id})">
+                                        <i class="bi bi-list-ul"></i> 歌单
+                                    </button>
+                                    ` : ''}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table>';
+                contentDiv.innerHTML = html;
+                resultsDiv.style.display = 'block';
+            } else {
+                contentDiv.innerHTML = `<p class="text-muted text-center">${escapeHtml(artist)} 暂无歌曲</p>`;
+                resultsDiv.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Artist songs search error:', error);
             alert('搜索失败');
         });
 }

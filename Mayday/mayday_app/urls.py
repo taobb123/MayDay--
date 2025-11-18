@@ -28,6 +28,8 @@ urlpatterns = [
     path('api/scan/', views.ScanView.as_view(), name='scan'),
     path('api/timeline/', views.TimelineView.as_view(), name='timeline'),
     path('api/search/', views.SearchView.as_view(), name='search'),
+    path('api/search/artists/', views.ArtistSearchView.as_view(), name='artist_search'),
+    path('api/search/artist-songs/', views.ArtistSongsView.as_view(), name='artist_songs'),
     
     # 用户认证路由
     path('login/', views.login_view, name='login'),

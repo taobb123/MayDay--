@@ -419,6 +419,70 @@ class SearchView(APIView):
         })
 
 
+class ArtistSearchView(APIView):
+    """歌手搜索视图 - 支持歌手名称模糊查询和首字母搜索"""
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        """搜索歌手"""
+        query = request.query_params.get('q', '').strip()
+        if not query:
+            return Response({'artists': []})
+        
+        # 获取所有不重复的歌手名称
+        artists = Song.objects.values_list('artist', flat=True).distinct()
+        
+        # 过滤：支持名称模糊查询
+        matching_artists = []
+        query_lower = query.lower()
+        
+        for artist in artists:
+            if artist and query_lower in artist.lower():
+                matching_artists.append(artist)
+        
+        # 如果查询是单个字符，也支持首字母搜索
+        if len(query) == 1:
+            # 获取首字母（支持英文首字母）
+            for artist in artists:
+                if artist:
+                    # 检查英文首字母（不区分大小写）
+                    first_char = artist[0].lower()
+                    if first_char == query_lower:
+                        if artist not in matching_artists:
+                            matching_artists.append(artist)
+        
+        # 去重并排序
+        matching_artists = sorted(list(set(matching_artists)))
+        
+        return Response({
+            'artists': matching_artists,
+            'count': len(matching_artists)
+        })
+
+
+class ArtistSongsView(APIView):
+    """根据歌手获取歌曲列表 - 最多返回12首"""
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        """根据歌手名称获取歌曲"""
+        artist = request.query_params.get('artist', '').strip()
+        if not artist:
+            return Response({'results': [], 'error': '缺少artist参数'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 搜索该歌手的歌曲，最多12首
+        songs = Song.objects.filter(
+            artist__iexact=artist
+        ).select_related('album')[:12]
+        
+        serializer = SongSerializer(songs, many=True)
+        return Response({
+            'results': serializer.data,
+            'count': len(serializer.data),
+            'artist': artist
+        })
+
+
 class PlaylistViewSet(viewsets.ModelViewSet):
     """歌单视图集"""
     serializer_class = PlaylistSerializer
