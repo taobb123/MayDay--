@@ -13,7 +13,8 @@ python cleanup_duplicate_songs.py
 python cleanup_duplicate_songs.py --delete --exclude 123 456 789
 
 
-
+python cleanup_duplicate_songs.py  # 预览模式，查看重复
+python cleanup_duplicate_songs.py --delete  # 实际删除重复
 
 ## 脚本功能
 

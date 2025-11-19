@@ -45,6 +45,9 @@ class MusicScanner(MusicScannerInterface):
     # 支持的音频格式
     SUPPORTED_FORMATS = {'.mp3', '.flac', '.wav', '.m4a', '.aac', '.ogg'}
     
+    # 允许创建专辑的目录（只有从此目录扫描的文件才会创建新专辑）
+    ALLOWED_ALBUM_DIRECTORY = r'D:\Music\五月天'
+    
     def __init__(self, directory_path: Optional[str] = None):
         self.directory_path = directory_path or settings.MUSIC_DIRECTORY
     
@@ -127,7 +130,23 @@ class MusicScanner(MusicScannerInterface):
     def _create_or_update_song(self, file_path: Path, metadata: Dict[str, Any]) -> Optional[Song]:
         """创建或更新歌曲记录"""
         try:
-            # 查找或创建专辑（规范化名称，避免重复）
+            # 检查文件路径是否在允许创建专辑的目录下
+            try:
+                file_path_resolved = file_path.resolve()
+                allowed_dir = Path(self.ALLOWED_ALBUM_DIRECTORY).resolve()
+                is_in_allowed_directory = str(file_path_resolved).startswith(str(allowed_dir))
+            except (OSError, RuntimeError):
+                # 如果路径解析失败，使用绝对路径比较
+                try:
+                    file_path_abs = file_path.absolute()
+                    allowed_dir_abs = Path(self.ALLOWED_ALBUM_DIRECTORY).absolute()
+                    is_in_allowed_directory = str(file_path_abs).startswith(str(allowed_dir_abs))
+                except Exception:
+                    # 如果都失败，默认不允许创建专辑
+                    is_in_allowed_directory = False
+            
+            # 查找已存在的专辑（禁止创建新专辑）
+            # 只关联到数据库中已存在的专辑，不会创建新专辑
             album = None
             if metadata.get('album'):
                 # 规范化专辑名称：去除首尾空格
@@ -146,12 +165,8 @@ class MusicScanner(MusicScannerInterface):
                             if normalized_existing == normalized_name:
                                 album = existing_album
                                 break
-                    # 如果还是没找到，创建新专辑
-                    if not album:
-                        album, _ = Album.objects.get_or_create(
-                            name=album_name,
-                            defaults={'release_date': '2000-01-01'}  # 默认日期，后续可手动更新
-                        )
+                    # 注意：禁止创建新专辑
+                    # 如果专辑不存在，album保持为None，歌曲将不关联任何专辑
             
             # 规范化文件路径（统一路径格式）
             try:
