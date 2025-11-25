@@ -105,7 +105,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Music directory path
-MUSIC_DIRECTORY = r'D:\Music\各种音乐榜单\无损音乐 B4YJ6KTM52YHBOUYJWUTY5GVDMH2PL4SXTTSPIE2X4ARGSW4BEYL6A'
+MUSIC_DIRECTORY = r'D:\Music\郑秀文'
 
 # Lyrics directory path
 LYRICS_DIRECTORY = r'C:\Lyrics'
