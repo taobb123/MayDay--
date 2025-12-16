@@ -8,26 +8,53 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
         :root {
-            --primary-color: #4a90e2;
-            --secondary-color: #f5a623;
-            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            /* 基础背景色 */
+            --bg-primary: #FFFFFF;
+            --bg-surface: #F6F7F9;
+            --bg-muted: #ECEEF1;
+            --bg-divider: #E2E4E8;
+            
+            /* 品牌主色 */
+            --primary: #4A6CF7;
+            --primary-hover: #3F5DE0;
+            --primary-active: #354FC3;
+            --secondary: #5BC8AF;
+            --accent: #F78DA7;
+            
+            /* 文字色 */
+            --text-primary: #1A1A1A;
+            --text-secondary: #4C4C4C;
+            --text-muted: #7E7E7E;
+            --text-disabled: #B5B5B5;
+            
+            /* 兼容旧变量 */
+            --primary-color: var(--primary);
+            --secondary-color: var(--secondary);
+            --bg-main: var(--bg-primary);
+            --bg-white: var(--bg-primary);
+            --bg-card: var(--bg-primary);
+            --bg-card-alt: var(--bg-surface);
+            --border-color: var(--bg-divider);
+            --bg-line: var(--bg-divider);
         }
         
         body {
-            background: var(--bg-gradient);
+            background: var(--bg-primary);
             min-height: 100vh;
             font-family: 'Microsoft YaHei', sans-serif;
             font-size: 14px;
             padding: 20px 10px;
+            color: var(--text-primary);
         }
         
         .main-container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            background: var(--bg-primary);
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             margin: 0 auto;
             padding: 40px 50px;
             max-width: 1400px;
+            border: 1px solid var(--bg-divider);
         }
         
         @media (max-width: 768px) {
@@ -48,15 +75,17 @@
             position: relative;
             padding: 18px 20px;
             margin: 15px 0;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
+            background: var(--bg-surface);
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--bg-divider);
+            transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
         }
         
         .timeline-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+            background: var(--bg-primary);
         }
         
         .timeline-item::before {
@@ -68,23 +97,35 @@
             width: 20px;
             height: 20px;
             border-radius: 50%;
-            background: var(--primary-color);
-            border: 3px solid white;
-            box-shadow: 0 0 0 3px var(--primary-color);
+            background: var(--primary);
+            border: 3px solid var(--bg-primary);
+            box-shadow: 0 0 0 2px var(--bg-primary);
         }
         
-        .timeline-item.album::before { background: #4a90e2; }
-        .timeline-item.tour::before { background: #f5a623; }
-        .timeline-item.quote::before { background: #50c878; }
-        .timeline-item.image::before { background: #e74c3c; }
+        .timeline-item.album::before { 
+            background: var(--primary);
+            box-shadow: 0 0 0 2px var(--bg-primary);
+        }
+        .timeline-item.tour::before { 
+            background: var(--secondary);
+            box-shadow: 0 0 0 2px var(--bg-primary);
+        }
+        .timeline-item.quote::before { 
+            background: var(--accent);
+            box-shadow: 0 0 0 2px var(--bg-primary);
+        }
+        .timeline-item.image::before { 
+            background: var(--secondary);
+            box-shadow: 0 0 0 2px var(--bg-primary);
+        }
         
         .music-player {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            background: transparent;
-            color: white;
+            background: var(--bg-surface);
+            color: var(--text-primary);
             padding: 0;
             z-index: 1000;
             display: none;
@@ -93,6 +134,8 @@
             opacity: 0;
             transform: translateY(20px);
             transition: opacity 0.3s ease, transform 0.3s ease;
+            border-top: 1px solid var(--bg-divider);
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
         }
         
         .music-player.active {
@@ -103,9 +146,11 @@
         
         .player-toolbar {
             padding: 15px;
-            background: rgba(0, 0, 0, 0.8);
+            background: var(--bg-surface);
+            border-top: 1px solid var(--bg-divider);
             border-bottom: none;
             flex-shrink: 0;
+            box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.05);
         }
         
         .lyrics-container {
@@ -114,7 +159,7 @@
             overflow-x: hidden;
             padding: 30px 20px;
             text-align: center;
-            background: transparent;
+            background: var(--bg-primary);
             scroll-behavior: smooth;
             min-height: 0;
             transition: all 0.3s ease;
@@ -131,9 +176,9 @@
             display: none;
             text-align: center;
             padding: 0;
-            color: rgba(255, 255, 255, 0.9);
-            background: transparent;
-            border-bottom: none;
+            color: var(--text-primary);
+            background: var(--bg-muted);
+            border-bottom: 1px solid var(--bg-divider);
             overflow: hidden;
             height: 60px;
             position: relative;
@@ -160,7 +205,7 @@
             padding: 10px 20px;
             font-size: 24px;
             font-weight: 600;
-            color: rgba(128, 128, 128, 0.8);
+            color: var(--text-secondary);
             line-height: 1.5;
             width: 100%;
             text-align: center;
@@ -174,10 +219,9 @@
         }
         
         .lyrics-mini-line.current {
-            color: #4a90e2;
+            color: var(--primary);
             font-weight: 700;
             font-size: 26px;
-            text-shadow: 0 0 15px rgba(74, 144, 226, 0.6);
             opacity: 1;
         }
         
@@ -211,17 +255,17 @@
         }
         
         .lyrics-container::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--bg-surface);
             border-radius: 3px;
         }
         
         .lyrics-container::-webkit-scrollbar-thumb {
-            background: rgba(74, 144, 226, 0.5);
+            background: var(--bg-divider);
             border-radius: 3px;
         }
         
         .lyrics-container::-webkit-scrollbar-thumb:hover {
-            background: rgba(74, 144, 226, 0.7);
+            background: var(--text-muted);
         }
         
         .lyrics-line {
@@ -229,12 +273,12 @@
             margin: 4px 0;
             font-size: 15px;
             line-height: 2;
-            color: rgba(255, 255, 255, 0.5);
+            color: var(--text-secondary);
             transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
             border-radius: 8px;
-            opacity: 0.6;
-            transform: scale(0.95);
+            opacity: 0.7;
+            transform: scale(0.98);
             position: relative;
             background: transparent;
         }
@@ -247,46 +291,39 @@
             transform: translateY(-50%);
             width: 0;
             height: 2px;
-            background: linear-gradient(90deg, #4a90e2, #764ba2);
+            background: var(--primary);
             transition: width 0.5s ease;
         }
         
         .lyrics-line.active {
-            color: #4a90e2;
+            color: var(--primary);
             font-size: 20px;
             font-weight: 600;
             opacity: 1;
-            transform: scale(1.05);
-            text-shadow: 0 0 15px rgba(74, 144, 226, 0.6);
+            transform: scale(1.02);
             background: transparent;
             box-shadow: none;
         }
         
         .lyrics-line:hover:not(.active) {
-            color: rgba(255, 255, 255, 0.8);
-            opacity: 0.8;
+            color: var(--text-primary);
+            opacity: 0.9;
             transform: scale(1);
-            background: transparent;
+            background: var(--bg-surface);
         }
         
         .lyrics-line.active::before {
             width: 4px;
         }
         
-        .lyrics-line:hover:not(.active) {
-            color: rgba(255, 255, 255, 0.8);
-            opacity: 0.8;
-            transform: scale(1);
-            background: transparent;
-        }
-        
         .lyrics-line.past {
-            opacity: 0.4;
-            transform: scale(0.9);
+            opacity: 0.5;
+            transform: scale(0.96);
+            color: var(--text-muted);
         }
         
         .lyrics-empty {
-            color: rgba(255, 255, 255, 0.4);
+            color: var(--text-muted);
             font-style: italic;
             padding: 60px 0;
             font-size: 16px;
@@ -305,11 +342,11 @@
         }
         
         .player-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
+            background: var(--bg-primary);
+            border: 1px solid var(--bg-divider);
+            color: var(--text-primary);
             padding: 8px 12px;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
@@ -318,8 +355,9 @@
         }
         
         .player-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: var(--bg-surface);
             transform: scale(1.05);
+            border-color: var(--primary);
         }
         
         .player-btn:active {
@@ -327,8 +365,9 @@
         }
         
         .player-btn.active {
-            background: rgba(74, 144, 226, 0.3);
-            color: #4a90e2;
+            background: rgba(74, 108, 247, 0.08);
+            color: var(--primary);
+            border-color: var(--primary);
         }
         
         .play-mode-btn {
@@ -341,12 +380,13 @@
             bottom: 100%;
             left: 0;
             margin-bottom: 10px;
-            background: rgba(0, 0, 0, 0.9);
+            background: var(--bg-primary);
+            border: 1px solid var(--bg-divider);
             border-radius: 8px;
             padding: 8px 0;
             min-width: 120px;
             display: none;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
         
         .play-mode-menu.show {
@@ -355,7 +395,7 @@
         
         .play-mode-item {
             padding: 10px 20px;
-            color: white;
+            color: var(--text-primary);
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
@@ -364,12 +404,12 @@
         }
         
         .play-mode-item:hover {
-            background: rgba(74, 144, 226, 0.2);
+            background: var(--bg-surface);
         }
         
         .play-mode-item.active {
-            background: rgba(74, 144, 226, 0.3);
-            color: #4a90e2;
+            background: rgba(74, 108, 247, 0.08);
+            color: var(--primary);
         }
         
         .play-mode-item i {
@@ -393,23 +433,25 @@
         }
         
         .album-card {
-            background: white;
-            border-radius: 12px;
+            background: var(--bg-primary);
+            border-radius: 14px;
             overflow: hidden;
-            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--bg-divider);
+            transition: transform 0.3s, box-shadow 0.3s;
             cursor: pointer;
         }
         
         .album-card:hover {
-            transform: scale(1.03);
+            transform: scale(1.02);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
         }
         
         .album-cover {
             width: 100%;
             height: 200px;
             object-fit: cover;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--bg-surface);
         }
         
         .album-info {
@@ -450,11 +492,11 @@
             text-align: center;
             margin-bottom: 30px;
             padding-bottom: 15px;
-            border-bottom: 2px solid #eee;
+            border-bottom: 1px solid var(--bg-divider);
         }
         
         .header h1 {
-            color: var(--primary-color);
+            color: var(--primary);
             font-weight: bold;
             margin-bottom: 8px;
             font-size: 28px;
@@ -486,16 +528,27 @@
         
         .table {
             font-size: 14px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
         }
         
         .table th {
             font-size: 13px;
             font-weight: 600;
             padding: 10px 12px;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--bg-divider);
         }
         
         .table td {
             padding: 10px 12px;
+            border-bottom: 1px solid var(--bg-divider);
+            color: var(--text-primary);
+        }
+        
+        .table-hover tbody tr:hover {
+            background: var(--bg-surface);
         }
         
         .btn-sm {
@@ -532,33 +585,33 @@
         }
         
         #searchResults .btn-group .btn-primary {
-            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            background: var(--primary);
             border: none;
-            color: white;
-            box-shadow: 0 2px 4px rgba(74, 144, 226, 0.3);
+            color: #FFFFFF;
+            box-shadow: 0 2px 6px rgba(74, 108, 247, 0.25);
         }
         
         #searchResults .btn-group .btn-primary:hover {
-            background: linear-gradient(135deg, #357abd 0%, #2a5f8f 100%);
+            background: var(--primary-hover);
             transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(74, 144, 226, 0.4);
+            box-shadow: 0 4px 12px rgba(74, 108, 247, 0.3);
         }
         
         #searchResults .btn-group .btn-primary:active {
             transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(74, 144, 226, 0.3);
+            box-shadow: 0 2px 6px rgba(74, 108, 247, 0.25);
         }
         
         #searchResults .btn-group .btn-outline-secondary {
-            border: 1.5px solid #6c757d;
-            color: #6c757d;
-            background: white;
+            border: 1.5px solid var(--bg-divider);
+            color: var(--text-primary);
+            background: var(--bg-surface);
         }
         
         #searchResults .btn-group .btn-outline-secondary:hover {
-            background: #6c757d;
-            color: white;
-            border-color: #6c757d;
+            background: var(--bg-muted);
+            color: var(--text-primary);
+            border-color: var(--bg-divider);
             transform: translateY(-1px);
         }
         
@@ -602,6 +655,216 @@
             font-size: 14px;
             margin: 10px 0;
         }
+        
+        /* 卡片样式优化 */
+        .card {
+            background: var(--bg-primary);
+            border: 1px solid var(--bg-divider);
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .card-header {
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--bg-divider);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .card-body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        /* 输入框样式优化 */
+        .form-control {
+            border: 1px solid #D8DCE2;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .form-control:hover {
+            border-color: var(--primary);
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 0.2rem rgba(74, 108, 247, 0.15);
+            background: var(--bg-primary);
+        }
+        
+        .form-control::placeholder {
+            color: #9A9A9A;
+        }
+        
+        /* 按钮样式优化 */
+        .btn-primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #FFFFFF;
+            box-shadow: 0 2px 6px rgba(74, 108, 247, 0.25);
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
+            box-shadow: 0 4px 12px rgba(74, 108, 247, 0.3);
+        }
+        
+        .btn-primary:active {
+            background: var(--primary-active);
+            border-color: var(--primary-active);
+        }
+        
+        .btn-outline-secondary {
+            border-color: var(--bg-divider);
+            color: var(--text-primary);
+            background: var(--bg-surface);
+        }
+        
+        .btn-outline-secondary:hover {
+            background: var(--bg-muted);
+            border-color: var(--bg-divider);
+            color: var(--text-primary);
+        }
+        
+        .btn-scan {
+            background: var(--primary);
+            border: none;
+            color: #FFFFFF;
+        }
+        
+        .btn-scan:hover {
+            background: var(--primary-hover);
+            box-shadow: 0 4px 12px rgba(74, 108, 247, 0.3);
+            transform: scale(1.03);
+        }
+        
+        /* 文本颜色优化 */
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+        
+        /* 导航链接样式 */
+        a {
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
+        }
+        
+        a:hover {
+            color: var(--primary);
+        }
+        
+        /* 音频播放器进度条样式 */
+        input[type="range"] {
+            background: #DADDE2;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            background: var(--primary);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            background: var(--primary);
+        }
+        
+        /* Bootstrap覆盖样式 */
+        .btn-secondary {
+            background: var(--bg-surface);
+            border-color: var(--bg-divider);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-muted);
+            border-color: var(--bg-divider);
+            color: var(--text-primary);
+        }
+        
+        .btn-success {
+            background: var(--secondary);
+            border-color: var(--secondary);
+            color: #FFFFFF;
+        }
+        
+        .btn-success:hover {
+            background: var(--secondary);
+            border-color: var(--secondary);
+            opacity: 0.9;
+            color: #FFFFFF;
+        }
+        
+        .btn-outline-primary {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: transparent;
+        }
+        
+        .btn-outline-primary:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #FFFFFF;
+        }
+        
+        .btn-outline-danger {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: transparent;
+        }
+        
+        .btn-outline-danger:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #FFFFFF;
+        }
+        
+        /* 模态框样式 */
+        .modal-content {
+            background: var(--bg-primary);
+            border: 1px solid var(--bg-divider);
+            color: var(--text-primary);
+        }
+        
+        .modal-header {
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--bg-divider);
+        }
+        
+        .modal-footer {
+            background: var(--bg-surface);
+            border-top: 1px solid var(--bg-divider);
+        }
+        
+        .close, .btn-close {
+            color: var(--text-secondary);
+            opacity: 0.8;
+        }
+        
+        .close:hover, .btn-close:hover {
+            color: var(--text-primary);
+            opacity: 1;
+        }
+        
+        /* 下拉菜单样式 */
+        .dropdown-menu {
+            background: var(--bg-primary);
+            border: 1px solid var(--bg-divider);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dropdown-item {
+            color: var(--text-primary);
+        }
+        
+        .dropdown-item:hover {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+        }
+        
+        .dropdown-item.active {
+            background: rgba(74, 108, 247, 0.08);
+            color: var(--primary);
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -624,23 +887,9 @@
                         <a href="{% url 'index' %}#timeline" class="text-decoration-none" style="color: var(--primary-color); font-weight: 500;">
                             <i class="bi bi-clock-history"></i> 时间隧道
                         </a>
-                        {% if user.is_authenticated %}
                         <a href="{% url 'playlist_list' %}" class="text-decoration-none" style="color: var(--primary-color); font-weight: 500;">
                             <i class="bi bi-music-note-list"></i> 我的歌单
                         </a>
-                        <span style="color: #999;">|</span>
-                        <span style="color: #666;">{{ user.username }}</span>
-                        <a href="{% url 'logout' %}" class="text-decoration-none" style="color: var(--primary-color); font-weight: 500;">
-                            <i class="bi bi-box-arrow-right"></i> 登出
-                        </a>
-                        {% else %}
-                        <a href="{% url 'login' %}" class="text-decoration-none" style="color: var(--primary-color); font-weight: 500;">
-                            <i class="bi bi-box-arrow-in-right"></i> 登录
-                        </a>
-                        <a href="{% url 'register' %}" class="text-decoration-none" style="color: var(--primary-color); font-weight: 500;">
-                            <i class="bi bi-person-plus"></i> 注册
-                        </a>
-                        {% endif %}
                     </div>
                 </nav>
             </div>
@@ -1179,9 +1428,9 @@
                     updateShuffledPlaylist();
                 } catch (error) {
                     console.error('获取播放列表失败:', error);
-                    // 如果是401或403错误，可能是未登录，静默处理
+                    // 如果是401或403错误，静默处理
                     if (error.message && (error.message.includes('401') || error.message.includes('403'))) {
-                        console.log('未登录用户，跳过API获取播放列表，将从页面按钮获取');
+                        console.log('API访问被拒绝，跳过API获取播放列表，将从页面按钮获取');
                         // 不抛出错误，继续使用从页面获取的列表
                     } else {
                         // 其他错误才显示提示
@@ -2109,10 +2358,31 @@
                     body: JSON.stringify({})
                 });
                 
+                // 检查HTTP响应状态
+                if (!response.ok) {
+                    let errorMsg = '扫描失败：服务器错误';
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.message || errorMsg;
+                    } catch (e) {
+                        errorMsg = `扫描失败：HTTP ${response.status} ${response.statusText}`;
+                    }
+                    showError(errorMsg);
+                    return;
+                }
+                
                 const data = await response.json();
                 
+                // 检查后端返回的状态
+                if (data.status === 'error') {
+                    showError('扫描失败：' + (data.message || '未知错误'));
+                    return;
+                }
+                
+                // 扫描成功
+                console.log('扫描完成，更新播放列表...', data);
+                
                 // 扫描完成后，重新初始化播放列表
-                console.log('扫描完成，更新播放列表...');
                 await initPlaylist();
                 
                 // 检查播放器是否激活
@@ -2139,12 +2409,13 @@
                     }
                 } else {
                     // 如果播放器未激活，直接刷新
-                    alert(data.message || '扫描完成！播放列表已更新。');
+                    showSuccess(data.message || '扫描完成！播放列表已更新。');
                     setTimeout(() => {
                         location.reload();
                     }, 500);
                 }
             } catch (error) {
+                console.error('扫描错误:', error);
                 const errorMsg = error.message || '未知错误';
                 showError('扫描失败：' + errorMsg);
             } finally {

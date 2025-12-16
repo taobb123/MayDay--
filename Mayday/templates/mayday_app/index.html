@@ -1,7 +1,7 @@
 {% extends 'mayday_app/base.html' %}
 
 {% block content %}
-<div class="container-fluid" data-user-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
+<div class="container-fluid" data-user-authenticated="true">
     <!-- 搜索和操作按钮 -->
     <div class="mb-4">
         <!-- 操作按钮行：右对齐 -->
@@ -46,7 +46,6 @@
                     </div>
                 </div>
             </div>
-            {% if user.is_authenticated %}
             <div class="mt-2">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <span><i class="bi bi-music-note-list"></i> 我的歌单：</span>
@@ -64,11 +63,9 @@
                     {% endif %}
                 </div>
             </div>
-            {% endif %}
         </div>
         
         <!-- 选择歌单模态框 -->
-        {% if user.is_authenticated %}
         <div class="modal fade" id="selectPlaylistModal" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -91,7 +88,6 @@
                 </div>
             </div>
         </div>
-        {% endif %}
     </div>
     
     <!-- 歌手列表模态框 -->
@@ -235,11 +231,9 @@
                                     <i class="bi bi-play-fill"></i> 播放
                                 </button>
                                 {% endif %}
-                                {% if user.is_authenticated %}
                                 <button class="btn btn-sm btn-outline-secondary" onclick="showPlaylistModal({{ song.id }})" type="button">
                                     <i class="bi bi-list-ul"></i> 歌单
                                 </button>
-                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -373,8 +367,8 @@ function collectSearchResultList() {
 
 // 统一的播放处理函数（支持自动添加列表到播放器）
 function handlePlaySong(playUrl, title, artist, songId, source = 'main') {
-    // 如果用户已登录，自动将当前列表添加到播放器
-    if (USER_AUTHENTICATED) {
+    // 自动将当前列表添加到播放器
+    {
         let currentList = [];
         
         // 根据来源选择不同的列表收集方式
@@ -501,12 +495,10 @@ function performSongSearch(query) {
                                             style="white-space: nowrap;">
                                         <i class="bi bi-play-fill"></i><span>播放</span>
                                     </button>
-                                    ${USER_AUTHENTICATED ? `
                                     <button class="btn btn-sm btn-outline-secondary" onclick="showPlaylistModal(${song.id})"
                                             style="white-space: nowrap;">
                                         <i class="bi bi-list-ul"></i><span>歌单</span>
                                     </button>
-                                    ` : ''}
                                 </div>
                             </td>
                         </tr>
@@ -592,12 +584,10 @@ function searchArtistSongs(artist) {
                                             style="white-space: nowrap;">
                                         <i class="bi bi-play-fill"></i><span>播放</span>
                                     </button>
-                                    ${USER_AUTHENTICATED ? `
                                     <button class="btn btn-sm btn-outline-secondary" onclick="showPlaylistModal(${song.id})"
                                             style="white-space: nowrap;">
                                         <i class="bi bi-list-ul"></i><span>歌单</span>
                                     </button>
-                                    ` : ''}
                                 </div>
                             </td>
                         </tr>
@@ -824,9 +814,9 @@ function showPlaylistModal(songId) {
                         throw new Error(`HTTP错误: ${response.status}`);
                     }
                 } else {
-                    // 如果是401或403，可能是认证问题
+                    // 如果是401或403，可能是认证问题（暂时忽略）
                     if (response.status === 401 || response.status === 403) {
-                        throw new Error('请先登录');
+                        throw new Error('访问被拒绝');
                     }
                     throw new Error(`HTTP错误: ${response.status}`);
                 }
@@ -911,9 +901,7 @@ function showPlaylistModal(songId) {
             console.error('错误详情:', error.message, error.stack);
             
             let errorMessage = '加载歌单失败，请重试';
-            if (error.message === '请先登录') {
-                errorMessage = '请先登录后再添加歌曲到歌单';
-            } else if (error.message) {
+            if (error.message) {
                 errorMessage = error.message;
             }
             

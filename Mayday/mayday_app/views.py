@@ -272,10 +272,8 @@ def index(request):
     # 计算歌曲列表的起始索引（用于显示序号）
     songs_start_index = (songs.number - 1) * songs.paginator.per_page + 1
     
-    # 获取歌单列表（如果用户已登录）
-    playlists = []
-    if request.user.is_authenticated:
-        playlists = Playlist.objects.filter(user=request.user).prefetch_related('songs').order_by('-created_at')
+    # 获取歌单列表（暂时显示所有歌单）
+    playlists = Playlist.objects.all().prefetch_related('songs').order_by('-created_at')
     
     context = {
         'albums': albums,  # 分页后的专辑对象
@@ -562,12 +560,12 @@ class ArtistsByInitialView(APIView):
 class PlaylistViewSet(viewsets.ModelViewSet):
     """歌单视图集"""
     serializer_class = PlaylistSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]  # 暂时取消登录要求
     queryset = Playlist.objects.all()  # 需要定义queryset，但实际使用get_queryset过滤
     
     def get_queryset(self):
-        """只返回当前用户的歌单"""
-        return Playlist.objects.filter(user=self.request.user).prefetch_related('songs__song')
+        """返回所有歌单（暂时不限制用户）"""
+        return Playlist.objects.all().prefetch_related('songs__song')
     
     def initial(self, request, *args, **kwargs):
         """重写initial方法，确保认证错误返回JSON"""
@@ -584,8 +582,11 @@ class PlaylistViewSet(viewsets.ModelViewSet):
             raise
     
     def perform_create(self, serializer):
-        """创建歌单时自动设置用户"""
-        serializer.save(user=self.request.user)
+        """创建歌单时自动设置用户（暂时使用None或第一个用户）"""
+        # 暂时取消用户限制，使用None或获取第一个用户
+        from django.contrib.auth.models import User
+        user = User.objects.first() if User.objects.exists() else None
+        serializer.save(user=user)
     
     def get_renderers(self):
         """根据Accept头选择渲染器，优先返回JSON"""
@@ -751,7 +752,7 @@ class PlaylistViewSet(viewsets.ModelViewSet):
             return Response({'error': '缺少必要参数'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            target_playlist = Playlist.objects.get(id=target_playlist_id, user=request.user)
+            target_playlist = Playlist.objects.get(id=target_playlist_id)
         except Playlist.DoesNotExist:
             return Response({'error': '目标歌单不存在'}, status=status.HTTP_404_NOT_FOUND)
         
@@ -779,12 +780,14 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         if not playlist_name:
             return Response({'error': '缺少歌单名称'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # 检查是否已存在同名歌单
-        if Playlist.objects.filter(user=request.user, name=playlist_name).exists():
+        # 检查是否已存在同名歌单（暂时不限制用户）
+        if Playlist.objects.filter(name=playlist_name).exists():
             return Response({'error': '歌单名称已存在'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # 创建歌单
-        playlist = Playlist.objects.create(user=request.user, name=playlist_name)
+        # 创建歌单（暂时使用第一个用户或None）
+        from django.contrib.auth.models import User
+        user = User.objects.first() if User.objects.exists() else None
+        playlist = Playlist.objects.create(user=user, name=playlist_name)
         
         # 添加歌曲
         songs = Song.objects.filter(id__in=song_ids)
@@ -795,67 +798,36 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-# 用户认证视图
+# 用户认证视图（暂时禁用）
 @csrf_protect
 def login_view(request):
-    """登录视图"""
-    if request.user.is_authenticated:
-        return redirect('index')
-    
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            next_url = request.GET.get('next', 'index')
-            return redirect(next_url)
-        else:
-            return render(request, 'mayday_app/login.html', {
-                'error': '用户名或密码错误'
-            })
-    
-    return render(request, 'mayday_app/login.html')
+    """登录视图（暂时禁用，直接重定向到首页）"""
+    return redirect('index')
 
 
 @csrf_protect
 def register_view(request):
-    """注册视图"""
-    if request.user.is_authenticated:
-        return redirect('index')
-    
-    if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect('index')
-    else:
-        form = UserCreationForm()
-    
-    return render(request, 'mayday_app/register.html', {'form': form})
-
-
-def logout_view(request):
-    """登出视图"""
-    logout(request)
+    """注册视图（暂时禁用，直接重定向到首页）"""
     return redirect('index')
 
 
-@login_required
+def logout_view(request):
+    """登出视图（暂时禁用，直接重定向到首页）"""
+    return redirect('index')
+
+
 def playlist_list_view(request):
-    """歌单列表页面"""
-    playlists = Playlist.objects.filter(user=request.user).prefetch_related('songs')
+    """歌单列表页面（暂时不限制用户）"""
+    playlists = Playlist.objects.all().prefetch_related('songs')
     return render(request, 'mayday_app/playlist_list.html', {
         'playlists': playlists
     })
 
 
-@login_required
 def create_playlist_api(request):
-    """创建歌单API - 使用JsonResponse确保返回JSON"""
+    """创建歌单API - 使用JsonResponse确保返回JSON（暂时不限制用户）"""
     # 调试信息
-    print(f"create_playlist_api called - Method: {request.method}, User: {request.user}, Authenticated: {request.user.is_authenticated}")
+    print(f"create_playlist_api called - Method: {request.method}")
     
     if request.method != 'POST':
         print(f"Method not allowed: {request.method}")
@@ -882,13 +854,15 @@ def create_playlist_api(request):
         if len(name) > 200:
             return JsonResponse({'error': '歌单名称不能超过200个字符'}, status=400)
         
-        # 检查是否已存在同名歌单
-        if Playlist.objects.filter(user=request.user, name=name).exists():
+        # 检查是否已存在同名歌单（暂时不限制用户）
+        if Playlist.objects.filter(name=name).exists():
             return JsonResponse({'error': '歌单名称已存在'}, status=400)
         
-        # 创建歌单
+        # 创建歌单（暂时使用第一个用户或None）
+        from django.contrib.auth.models import User
+        user = User.objects.first() if User.objects.exists() else None
         playlist = Playlist.objects.create(
-            user=request.user,
+            user=user,
             name=name,
         )
         
@@ -909,14 +883,13 @@ def create_playlist_api(request):
         return JsonResponse({'error': f'创建失败: {str(e)}'}, status=500)
 
 
-@login_required
 def update_playlist_api(request, playlist_id):
-    """更新歌单API - 使用JsonResponse确保返回JSON"""
+    """更新歌单API - 使用JsonResponse确保返回JSON（暂时不限制用户）"""
     if request.method not in ['PUT', 'PATCH']:
         return JsonResponse({'error': '只支持PUT/PATCH请求'}, status=405)
     
     try:
-        playlist = Playlist.objects.get(id=playlist_id, user=request.user)
+        playlist = Playlist.objects.get(id=playlist_id)
     except Playlist.DoesNotExist:
         return JsonResponse({'error': '歌单不存在'}, status=404)
     
@@ -939,8 +912,8 @@ def update_playlist_api(request, playlist_id):
         if len(name) > 200:
             return JsonResponse({'error': '歌单名称不能超过200个字符'}, status=400)
         
-        # 检查是否与其他歌单重名
-        if Playlist.objects.filter(user=request.user, name=name).exclude(id=playlist_id).exists():
+        # 检查是否与其他歌单重名（暂时不限制用户）
+        if Playlist.objects.filter(name=name).exclude(id=playlist_id).exists():
             return JsonResponse({'error': '歌单名称已存在'}, status=400)
         
         # 更新歌单
@@ -980,16 +953,15 @@ def delete_playlist_api(request, playlist_id):
         return JsonResponse({'error': f'删除失败: {str(e)}'}, status=500)
 
 
-@login_required
 def get_playlists_api(request):
-    """获取用户歌单列表API - 使用JsonResponse确保返回JSON"""
-    """GET /api/playlists/list/ - 返回当前用户的歌单列表，供"添加到歌单"弹窗选择"""
+    """获取用户歌单列表API - 使用JsonResponse确保返回JSON（暂时返回所有歌单）"""
+    """GET /api/playlists/list/ - 返回所有歌单列表，供"添加到歌单"弹窗选择"""
     if request.method != 'GET':
         return JsonResponse({'error': '只支持GET请求'}, status=405)
     
     try:
-        # 获取当前用户的所有歌单
-        playlists = Playlist.objects.filter(user=request.user).order_by('-created_at')
+        # 获取所有歌单（暂时不限制用户）
+        playlists = Playlist.objects.all().order_by('-created_at')
         
         # 构建简单的歌单列表（只包含id和name，供选择使用）
         playlist_list = [
@@ -1010,17 +982,16 @@ def get_playlists_api(request):
         return JsonResponse({'error': f'获取失败: {str(e)}'}, status=500)
 
 
-@login_required
 def add_song_to_playlist_api(request, playlist_id):
-    """添加歌曲到歌单API - 使用JsonResponse确保返回JSON"""
+    """添加歌曲到歌单API - 使用JsonResponse确保返回JSON（暂时不限制用户）"""
     """POST /api/playlists/{playlist_id}/add_song/ - 添加歌曲到指定歌单"""
     if request.method != 'POST':
         return JsonResponse({'error': '只支持POST请求'}, status=405)
     
     try:
-        # 验证歌单是否存在且属于当前用户
+        # 验证歌单是否存在（暂时不限制用户）
         try:
-            playlist = Playlist.objects.get(id=playlist_id, user=request.user)
+            playlist = Playlist.objects.get(id=playlist_id)
         except Playlist.DoesNotExist:
             return JsonResponse({'error': '歌单不存在'}, status=404)
         
@@ -1109,10 +1080,9 @@ def remove_song_from_playlist_api(request, playlist_id, song_id):
         return JsonResponse({'error': f'移除失败: {str(e)}'}, status=500)
 
 
-@login_required
 def playlist_detail_view(request, playlist_id):
-    """歌单详情页面"""
-    playlist = get_object_or_404(Playlist, id=playlist_id, user=request.user)
+    """歌单详情页面（暂时不限制用户）"""
+    playlist = get_object_or_404(Playlist, id=playlist_id)
     playlist_songs = playlist.songs.select_related('song', 'song__album').all()
     return render(request, 'mayday_app/playlist_detail.html', {
         'playlist': playlist,
