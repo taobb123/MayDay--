@@ -134,9 +134,13 @@
             flex-direction: column;
             opacity: 0;
             transform: translateY(20px);
-            transition: opacity 0.3s ease, transform 0.3s ease;
+            transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease, width 0.3s ease;
             border-top: 1px solid var(--bg-divider);
             box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+            /* 缩小播放器宽度，居中显示 */
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
         }
         
         .music-player.active {
@@ -145,8 +149,256 @@
             transform: translateY(0);
         }
         
+        /* 播放器收起状态 - 只隐藏工具栏，保留歌词 */
+        .music-player.collapsed {
+            max-height: none;
+            height: auto;
+            overflow: visible;
+            width: auto;
+            max-width: none;
+            left: auto;
+            right: 0;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* 收起时只隐藏播放器工具栏，保留歌词显示 */
+        .music-player.collapsed .player-toolbar {
+            display: none !important;
+        }
+        
+        /* 收起时只显示迷你版歌词，隐藏展开的歌词容器 */
+        .music-player.collapsed .lyrics-container {
+            display: none !important;
+        }
+        
+        .music-player.collapsed .lyrics-mini {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        .music-player.collapsed .lyrics-mini.active {
+            display: flex !important;
+        }
+        
+        /* 旋转唱片图标容器 - 收起时显示在底部 */
+        .player-collapsed-view {
+            display: none;
+            position: relative;
+            width: 100%;
+            height: 70px;
+            background: var(--bg-surface);
+            border-top: 1px solid var(--bg-divider);
+            align-items: center;
+            justify-content: flex-start;
+            padding: 0 20px;
+            cursor: pointer;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+        
+        .music-player.collapsed .player-collapsed-view {
+            display: flex !important;
+        }
+        
+        /* 收起时歌词区域在旋转唱片上方 */
+        .music-player.collapsed {
+            flex-direction: column;
+        }
+        
+        .music-player.collapsed .lyrics-mini {
+            order: -1;
+        }
+        
+        .music-player.collapsed .lyrics-container {
+            order: -1;
+            display: none !important;
+        }
+        
+        .music-player.collapsed .player-collapsed-view {
+            order: 1;
+        }
+        
+        /* 旋转唱片样式 */
+        .rotating-record {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
+            position: relative;
+            animation: rotate 3s linear infinite;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .rotating-record:hover {
+            transform: scale(1.1);
+        }
+        
+        /* 唱片中心圆点 */
+        .rotating-record::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--bg-primary);
+            border: 2px solid var(--primary);
+            z-index: 2;
+        }
+        
+        /* 唱片纹理线条 */
+        .rotating-record::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* 旋转动画 */
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        /* 唱片信息提示 */
+        .record-info {
+            margin-left: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .record-info .song-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        
+        .record-info .song-artist {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        /* 收起视图的控制按钮容器 */
+        .collapsed-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 20px;
+        }
+        
+        /* 收起视图的按钮样式 */
+        .collapsed-btn {
+            background: var(--bg-primary);
+            border: 1px solid var(--bg-divider);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            min-width: 36px;
+            min-height: 36px;
+        }
+        
+        .collapsed-btn:hover {
+            background: var(--bg-surface);
+            transform: scale(1.05);
+            border-color: var(--primary);
+        }
+        
+        .collapsed-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* 收起视图的主要按钮（播放/暂停） */
+        .collapsed-btn-primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #FFFFFF;
+            min-width: 40px;
+            min-height: 40px;
+            box-shadow: 0 2px 6px rgba(74, 108, 247, 0.3);
+        }
+        
+        .collapsed-btn-primary:hover {
+            background: var(--primary);
+            box-shadow: 0 3px 8px rgba(74, 108, 247, 0.4);
+        }
+        
+        /* 收起视图的次要按钮 */
+        .collapsed-btn-secondary {
+            background: var(--bg-primary);
+            border: 1px solid var(--bg-divider);
+            color: var(--text-primary);
+        }
+        
+        .collapsed-btn-secondary:hover {
+            background: var(--bg-surface);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        /* 展开按钮 */
+        .expand-player-btn {
+            margin-left: auto;
+            margin-right: 10px;
+            background: var(--primary);
+            border: none;
+            color: #FFFFFF;
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .expand-player-btn:hover {
+            background: var(--primary);
+            opacity: 0.9;
+            transform: scale(1.05);
+        }
+        
+        /* 关闭播放器按钮 */
+        .close-player-btn {
+            margin-left: 10px;
+            background: var(--accent);
+            border: none;
+            color: #FFFFFF;
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .close-player-btn:hover {
+            background: var(--accent);
+            opacity: 0.9;
+            transform: scale(1.05);
+        }
+        
         .player-toolbar {
-            padding: 15px;
+            padding: 20px 15px 0 15px;
             background: var(--bg-surface);
             border-top: 1px solid var(--bg-divider);
             border-bottom: none;
@@ -154,20 +406,30 @@
             box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.05);
         }
         
-        /* 播放进度条样式 */
+        /* 播放进度条样式 - 放在底部 */
         .player-progress-container {
             width: 100%;
-            padding: 10px 0 5px 0;
-            margin-bottom: 10px;
+            padding: 10px 0 0 0;
+            margin-top: 10px;
+            border-top: 1px solid var(--bg-divider);
+            position: relative;
+        }
+        
+        /* 关闭按钮容器 - 位于进度条上方 */
+        .player-close-container {
+            position: absolute;
+            top: -35px;
+            right: 0;
+            z-index: 10;
         }
         
         .player-progress {
             width: 100%;
-            height: 6px;
+            height: 8px;
             -webkit-appearance: none;
             appearance: none;
             background: var(--bg-divider);
-            border-radius: 3px;
+            border-radius: 4px;
             outline: none;
             cursor: pointer;
             transition: background 0.3s ease;
@@ -180,42 +442,42 @@
         .player-progress::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 14px;
-            height: 14px;
+            width: 18px;
+            height: 18px;
             background: var(--primary);
             border-radius: 50%;
             cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 6px rgba(74, 108, 247, 0.4);
         }
         
         .player-progress::-webkit-slider-thumb:hover {
-            width: 16px;
-            height: 16px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            width: 20px;
+            height: 20px;
+            box-shadow: 0 3px 8px rgba(74, 108, 247, 0.5);
         }
         
         .player-progress::-moz-range-thumb {
-            width: 14px;
-            height: 14px;
+            width: 18px;
+            height: 18px;
             background: var(--primary);
             border-radius: 50%;
             cursor: pointer;
             border: none;
             transition: all 0.2s ease;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 6px rgba(74, 108, 247, 0.4);
         }
         
         .player-progress::-moz-range-thumb:hover {
-            width: 16px;
-            height: 16px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            width: 20px;
+            height: 20px;
+            box-shadow: 0 3px 8px rgba(74, 108, 247, 0.5);
         }
         
         .player-progress::-moz-range-track {
             background: var(--bg-divider);
-            border-radius: 3px;
-            height: 6px;
+            border-radius: 4px;
+            height: 8px;
         }
         
         .lyrics-container {
@@ -403,7 +665,8 @@
         .player-controls {
             display: flex;
             align-items: center;
-            gap: 12px;
+            justify-content: center;
+            gap: 8px;
             flex-wrap: wrap;
         }
         
@@ -416,19 +679,52 @@
             background: var(--bg-primary);
             border: 1px solid var(--bg-divider);
             color: var(--text-primary);
-            padding: 8px 12px;
-            border-radius: 6px;
+            padding: 12px 16px;
+            border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 16px;
+            min-width: 44px;
+            min-height: 44px;
         }
         
-        .player-btn:hover {
+        /* 主要按钮（播放/暂停）- 更大更显眼 */
+        .player-btn-primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #FFFFFF;
+            padding: 16px 20px;
+            font-size: 20px;
+            min-width: 56px;
+            min-height: 56px;
+            box-shadow: 0 2px 8px rgba(74, 108, 247, 0.3);
+        }
+        
+        .player-btn-primary:hover {
+            background: var(--primary);
+            transform: scale(1.08);
+            box-shadow: 0 4px 12px rgba(74, 108, 247, 0.4);
+        }
+        
+        /* 次要按钮 */
+        .player-btn-secondary {
+            background: var(--bg-primary);
+            border: 1px solid var(--bg-divider);
+            color: var(--text-primary);
+        }
+        
+        .player-btn-secondary:hover {
             background: var(--bg-surface);
             transform: scale(1.05);
             border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .player-btn:hover {
+            transform: scale(1.05);
         }
         
         .player-btn:active {
@@ -443,7 +739,11 @@
         
         .play-mode-btn {
             position: relative;
-            min-width: 100px;
+            min-width: 110px;
+        }
+        
+        .play-mode-btn .player-btn {
+            font-size: 14px;
         }
         
         .play-mode-menu {
@@ -1033,6 +1333,33 @@
     
     <!-- 音乐播放器 -->
     <div class="music-player" id="musicPlayer">
+        <!-- 收起状态：旋转唱片视图 -->
+        <div class="player-collapsed-view">
+            <div class="rotating-record" onclick="togglePlayerCollapse()"></div>
+            <div class="record-info" onclick="togglePlayerCollapse()">
+                <div class="song-title" id="collapsedSongTitle">未选择歌曲</div>
+                <div class="song-artist" id="collapsedSongArtist">--</div>
+            </div>
+            <!-- 收起视图的控制按钮 -->
+            <div class="collapsed-controls">
+                <button class="collapsed-btn collapsed-btn-secondary" onclick="event.stopPropagation(); playPrevious();" title="上一首">
+                    <i class="bi bi-skip-backward-fill"></i>
+                </button>
+                <button class="collapsed-btn collapsed-btn-primary" onclick="event.stopPropagation(); togglePlayPause();" id="collapsedPlayPauseBtn" title="播放/暂停">
+                    <i class="bi bi-pause-fill"></i>
+                </button>
+                <button class="collapsed-btn collapsed-btn-secondary" onclick="event.stopPropagation(); playNext();" title="下一首">
+                    <i class="bi bi-skip-forward-fill"></i>
+                </button>
+            </div>
+            <button class="expand-player-btn" onclick="event.stopPropagation(); togglePlayerCollapse();">
+                <i class="bi bi-chevron-up"></i> 展开
+            </button>
+            <button class="close-player-btn" onclick="event.stopPropagation(); closePlayer();">
+                <i class="bi bi-x-lg"></i> 关闭
+            </button>
+        </div>
+        
         <!-- 歌词迷你模式（折叠时只显示当前行） -->
         <div class="lyrics-mini" id="lyricsMini">
             <div class="lyrics-mini-content" id="lyricsMiniContent">
@@ -1046,35 +1373,33 @@
         <!-- 播放器工具栏（固定在底部） -->
         <div class="player-toolbar">
             <div class="container">
-                <!-- 播放进度条 -->
-                <div class="player-progress-container">
-                    <input type="range" class="player-progress" id="playerProgress" min="0" max="100" value="0" step="0.1">
-                </div>
                 <div class="row align-items-center">
-                    <div class="col-md-3">
+                    <!-- 歌曲信息区域 -->
+                    <div class="col-md-4">
                         <div class="player-info">
-                            <div id="currentSongInfo" style="font-weight: 500; margin-bottom: 5px;">未选择歌曲</div>
-                            <small class="text-muted" id="currentTime">00:00 / 00:00</small>
+                            <div id="currentSongInfo" style="font-weight: 500; margin-bottom: 5px; font-size: 16px;">未选择歌曲</div>
+                            <small class="text-muted" id="currentTime" style="font-size: 13px;">00:00 / 00:00</small>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <!-- 控制按钮区域 -->
+                    <div class="col-md-8">
                         <div class="player-controls">
-                            <button class="player-btn" onclick="playPrevious()" id="prevBtn" title="上一首">
+                            <button class="player-btn player-btn-secondary" onclick="playPrevious()" id="prevBtn" title="上一首">
                                 <i class="bi bi-skip-backward-fill"></i>
                             </button>
-                            <button class="player-btn" onclick="togglePlayPause()" id="playPauseBtn" title="播放/暂停">
+                            <button class="player-btn player-btn-primary" onclick="togglePlayPause()" id="playPauseBtn" title="播放/暂停">
                                 <i class="bi bi-pause-fill"></i>
                             </button>
-                            <button class="player-btn" onclick="playNext()" id="nextBtn" title="下一首">
+                            <button class="player-btn player-btn-secondary" onclick="playNext()" id="nextBtn" title="下一首">
                                 <i class="bi bi-skip-forward-fill"></i>
                             </button>
-                            <audio id="audioPlayer" style="flex: 1; height: 40px; min-width: 200px;">
+                            <audio id="audioPlayer" style="display: none;">
                                 您的浏览器不支持音频播放
                             </audio>
                             <div class="play-mode-btn" style="position: relative;">
-                                <button class="player-btn play-mode-btn" onclick="togglePlayModeMenu()" id="playModeBtn" title="播放模式">
+                                <button class="player-btn player-btn-secondary play-mode-btn" onclick="togglePlayModeMenu()" id="playModeBtn" title="播放模式">
                                     <i class="bi bi-arrow-repeat" id="playModeIcon"></i>
-                                    <span id="playModeText" style="margin-left: 5px; font-size: 12px;">顺序</span>
+                                    <span id="playModeText" style="margin-left: 5px; font-size: 13px;">顺序</span>
                                 </button>
                             <div class="play-mode-menu" id="playModeMenu">
                                 <div class="play-mode-item active" data-mode="sequential" onclick="setPlayMode('sequential')">
@@ -1095,20 +1420,25 @@
                                 </div>
                             </div>
                             </div>
-                            <button class="player-btn" onclick="toggleLyrics()" id="toggleLyricsBtn" title="展开/折叠歌词">
+                            <button class="player-btn player-btn-secondary" onclick="toggleLyrics()" id="toggleLyricsBtn" title="展开/折叠歌词">
                                 <i class="bi bi-file-text"></i>
                             </button>
-                            <button class="player-btn" onclick="loadMoreSongs()" id="loadMoreBtn" title="加载更多歌曲" style="display: none;">
+                            <button class="player-btn player-btn-secondary" onclick="loadMoreSongs()" id="loadMoreBtn" title="加载更多歌曲" style="display: none;">
                                 <i class="bi bi-arrow-down-circle"></i>
-                                <span style="margin-left: 5px; font-size: 12px;">加载更多</span>
+                                <span style="margin-left: 5px; font-size: 13px;">加载更多</span>
                             </button>
                         </div>
                     </div>
-                    <div class="col-md-3 text-end">
-                        <button class="btn btn-sm btn-secondary" onclick="closePlayer()">
-                            <i class="bi bi-x-lg"></i> 关闭
+                </div>
+                <!-- 播放进度条 - 放在底部 -->
+                <div class="player-progress-container">
+                    <!-- 收起按钮 - 位于进度条上方 -->
+                    <div class="player-close-container">
+                        <button class="btn btn-sm btn-secondary" onclick="togglePlayerCollapse()" title="收起播放器">
+                            <i class="bi bi-chevron-down"></i> 收起
                         </button>
                     </div>
+                    <input type="range" class="player-progress" id="playerProgress" min="0" max="100" value="0" step="0.1">
                 </div>
             </div>
         </div>
@@ -1816,6 +2146,8 @@
             const player = document.getElementById('audioPlayer');
             const playerDiv = document.getElementById('musicPlayer');
             const songInfo = document.getElementById('currentSongInfo');
+            const collapsedSongTitle = document.getElementById('collapsedSongTitle');
+            const collapsedSongArtist = document.getElementById('collapsedSongArtist');
             
             if (!player || !playerDiv || !songInfo) {
                 console.error('播放器元素未找到');
@@ -1835,7 +2167,30 @@
             // 设置新的歌曲
             player.src = songUrl;
             songInfo.textContent = `${songTitle} - ${artist}`;
+            
+            // 更新收起视图的歌曲信息
+            if (collapsedSongTitle) {
+                collapsedSongTitle.textContent = songTitle;
+            }
+            if (collapsedSongArtist) {
+                collapsedSongArtist.textContent = artist;
+            }
+            
             playerDiv.classList.add('active');
+            // 默认以收起状态打开播放器
+            playerDiv.classList.add('collapsed');
+            
+            // 确保收起时显示迷你歌词
+            const lyricsMini = document.getElementById('lyricsMini');
+            if (lyricsMini) {
+                lyricsMini.classList.add('active');
+            }
+            // 隐藏展开的歌词容器
+            const lyricsContainer = document.getElementById('lyricsContainer');
+            if (lyricsContainer) {
+                lyricsContainer.style.display = 'none';
+            }
+            
             currentSongId = songId;
             
             // 更新当前播放索引
@@ -1902,10 +2257,7 @@
                     // 其他错误已经在error事件中处理
                 }
                 // 更新按钮状态为播放状态
-                const playPauseBtn = document.getElementById('playPauseBtn');
-                if (playPauseBtn) {
-                    playPauseBtn.innerHTML = '<i class="bi bi-play-fill"></i>';
-                }
+                updatePlayPauseButtons(false);
             }
             
             // 从文件夹读取歌词
@@ -1918,9 +2270,9 @@
                     if (lyricsResponse.ok) {
                         const lyricsData = await lyricsResponse.json();
                         if (lyricsData.lyrics && lyricsData.lyrics.trim().length > 0) {
-                            // 移除日志输出，减少控制台信息
+                            console.log('从文件读取到歌词，文件:', lyricsData.file);
                             currentLyrics = parseLyrics(lyricsData.lyrics);
-                            // 移除日志输出，减少控制台信息
+                            console.log('解析后的歌词行数:', currentLyrics.length);
                             renderLyrics(currentLyrics);
                             
                             // 根据展开状态显示歌词
@@ -1952,9 +2304,9 @@
                     
                     // 检查数据库中的歌词是否存在且不为空
                     if (data.lyrics && data.lyrics.trim && data.lyrics.trim().length > 0) {
-                        // 移除日志输出，减少控制台信息
+                        console.log('从数据库读取到歌词');
                         currentLyrics = parseLyrics(data.lyrics);
-                        // 移除日志输出，减少控制台信息
+                        console.log('解析后的歌词行数:', currentLyrics.length);
                         renderLyrics(currentLyrics);
                         
                         // 根据展开状态显示歌词
@@ -2105,12 +2457,38 @@
             return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
         
+        // 切换播放器收起/展开状态
+        function togglePlayerCollapse() {
+            const playerDiv = document.getElementById('musicPlayer');
+            const lyricsMini = document.getElementById('lyricsMini');
+            const lyricsContainer = document.getElementById('lyricsContainer');
+            
+            if (playerDiv.classList.contains('collapsed')) {
+                // 展开播放器
+                playerDiv.classList.remove('collapsed');
+            } else {
+                // 收起播放器 - 确保显示迷你版歌词
+                playerDiv.classList.add('collapsed');
+                
+                // 隐藏展开的歌词容器
+                if (lyricsContainer) {
+                    lyricsContainer.style.display = 'none';
+                }
+                
+                // 激活迷你版歌词
+                if (lyricsMini) {
+                    lyricsMini.classList.add('active');
+                }
+            }
+        }
+        
         function closePlayer() {
             const player = document.getElementById('audioPlayer');
             const playerDiv = document.getElementById('musicPlayer');
             player.pause();
             player.src = '';
             playerDiv.classList.remove('active');
+            playerDiv.classList.remove('collapsed');
             currentLyrics = [];
             currentSongId = null;
             lyricsVisible = false;
@@ -2211,7 +2589,7 @@
                         updateShuffledPlaylist();
                     }
                     
-                    // 移除日志输出，减少控制台信息
+                    console.log('播放列表已恢复:', playlist.length, '首歌曲');
                 }
                 
                 // 恢复播放模式（在恢复播放列表之后）
@@ -2222,7 +2600,7 @@
                         try {
                             setPlayMode(state.playMode);
                         } catch (e) {
-                            // 移除日志输出，减少控制台信息
+                            console.log('恢复播放模式UI失败，但模式已设置:', state.playMode);
                         }
                     }
                 }
@@ -2236,12 +2614,12 @@
                 if (state.songId && playlist.length > 0) {
                     const savedSong = playlist.find(song => song.id === state.songId);
                     if (!savedSong) {
-                        // 移除日志输出，减少控制台信息
+                        console.log('保存的歌曲不在播放列表中，清除状态');
                         localStorage.removeItem('playerState');
                         return false;
                     }
                     
-                    // 移除日志输出，减少控制台信息
+                    console.log('恢复播放:', savedSong.title);
                     
                     const playerDiv = document.getElementById('musicPlayer');
                     const player = document.getElementById('audioPlayer');
@@ -2295,7 +2673,7 @@
                     // 3. 恢复播放时间（在加载完成后）
                     if (state.currentTime > 0) {
                         player.currentTime = state.currentTime;
-                        // 移除日志输出，减少控制台信息
+                        console.log('播放时间已恢复到:', formatTime(state.currentTime));
                     }
                     
                     // 4. 恢复歌词展开状态（在播放前设置）
@@ -2321,7 +2699,19 @@
                         requestAnimationFrame(() => {
                             // 添加 active 类，触发 CSS 过渡动画
                             playerDiv.classList.add('active');
-                            // 移除日志输出，减少控制台信息
+                            // 默认以收起状态打开播放器
+                            playerDiv.classList.add('collapsed');
+                            // 确保收起时显示迷你歌词
+                            const lyricsMini = document.getElementById('lyricsMini');
+                            if (lyricsMini) {
+                                lyricsMini.classList.add('active');
+                            }
+                            // 隐藏展开的歌词容器
+                            const lyricsContainer = document.getElementById('lyricsContainer');
+                            if (lyricsContainer) {
+                                lyricsContainer.style.display = 'none';
+                            }
+                            console.log('播放器已显示（带动画）');
                         });
                     });
                     
@@ -2432,12 +2822,12 @@
             
             // 播放状态变化（保存状态）
             player.addEventListener('play', function() {
-                document.getElementById('playPauseBtn').innerHTML = '<i class="bi bi-pause-fill"></i>';
+                updatePlayPauseButtons(true);
                 savePlayerState();
             });
             
             player.addEventListener('pause', function() {
-                document.getElementById('playPauseBtn').innerHTML = '<i class="bi bi-play-fill"></i>';
+                updatePlayPauseButtons(false);
                 savePlayerState();
             });
             
