@@ -124,7 +124,8 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background: var(--bg-surface);
+            /* 播放器整体背景设为透明，让歌词区域不遮挡页面内容（如歌单） */
+            background: transparent;
             color: var(--text-primary);
             padding: 0;
             z-index: 1000;
@@ -153,13 +154,80 @@
             box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.05);
         }
         
+        /* 播放进度条样式 */
+        .player-progress-container {
+            width: 100%;
+            padding: 10px 0 5px 0;
+            margin-bottom: 10px;
+        }
+        
+        .player-progress {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: var(--bg-divider);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .player-progress:hover {
+            background: var(--bg-muted);
+        }
+        
+        .player-progress::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .player-progress::-webkit-slider-thumb:hover {
+            width: 16px;
+            height: 16px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .player-progress::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .player-progress::-moz-range-thumb:hover {
+            width: 16px;
+            height: 16px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .player-progress::-moz-range-track {
+            background: var(--bg-divider);
+            border-radius: 3px;
+            height: 6px;
+        }
+        
         .lyrics-container {
             flex: 1;
             overflow-y: auto;
             overflow-x: hidden;
             padding: 30px 20px;
             text-align: center;
-            background: var(--bg-primary);
+            /* 歌词区域背景设为透明，以免遮挡页面内容（如歌单） */
+            background: transparent;
+            /* 设置 pointer-events: none，让点击穿透到下方的歌单区域 */
+            pointer-events: none;
             scroll-behavior: smooth;
             min-height: 0;
             transition: all 0.3s ease;
@@ -177,7 +245,8 @@
             text-align: center;
             padding: 0;
             color: var(--text-primary);
-            background: var(--bg-muted);
+            /* 迷你歌词背景设为透明，不遮挡歌单区域 */
+            background: transparent;
             border-bottom: 1px solid var(--bg-divider);
             overflow: hidden;
             height: 60px;
@@ -281,6 +350,8 @@
             transform: scale(0.98);
             position: relative;
             background: transparent;
+            /* 歌词行本身保持可点击（点击跳转到对应时间） */
+            pointer-events: auto;
         }
         
         .lyrics-line::before {
@@ -633,6 +704,68 @@
             margin-bottom: 2rem !important;
         }
         
+        /* 歌单区域优化：增加高度和底部间距，确保可以滚动到底部并显示在播放器上方 */
+        #song-list {
+            min-height: calc(100vh - 150px); /* 确保有足够的滚动空间 */
+            padding-bottom: 100px !important; /* 大幅增加底部间距，预留播放器高度空间和足够的视觉空间 */
+            margin-bottom: 100px !important; /* 额外添加底部外边距，确保内容完全可见 */
+        }
+        
+        /* 确保歌单表格可以正常显示 */
+        #song-list .table-responsive {
+            max-height: none; /* 移除最大高度限制，允许完整显示 */
+        }
+        
+        /* 歌单分页导航也需要额外间距 */
+        #song-list .pagination {
+            margin-bottom: 50px !important;
+        }
+
+        /* 我的歌单页面：增加高度和底部间距，避免被播放器遮挡 */
+        /* 使用更具体的选择器，确保覆盖 .container-fluid 的默认样式 */
+        .container-fluid#playlist-page,
+        #playlist-page.container-fluid {
+            min-height: calc(100vh - 150px) !important;
+            /* 直接设置一个很大的底部padding，确保可以滚动到播放器上方 */
+            padding-bottom: 800px !important;
+            margin-bottom: 0 !important;
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+            position: relative !important;
+        }
+        
+        /* 当播放器激活时，增加更多的底部padding */
+        /* 使用类名选择器，兼容性更好 */
+        body.player-active-on-playlist-page #playlist-page,
+        body.player-active-on-playlist-page .container-fluid#playlist-page {
+            padding-bottom: 1200px !important;
+        }
+
+        #playlist-page .pagination {
+            margin-bottom: 50px !important;
+        }
+        
+        /* 确保歌单卡片行也有足够的底部空间 */
+        #playlist-page .row {
+            margin-bottom: 50px !important;
+        }
+        
+        /* 确保body可以正常滚动 */
+        body {
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        /* 为我的歌单页面添加滚动边距，确保内容可以滚动到播放器上方 */
+        html {
+            scroll-padding-bottom: 600px; /* 为固定定位的播放器预留空间 */
+        }
+        
+        #playlist-page {
+            scroll-margin-bottom: 600px; /* 额外的滚动边距 */
+        }
+        
         .mb-2 {
             margin-bottom: 0.6rem !important;
         }
@@ -913,6 +1046,10 @@
         <!-- 播放器工具栏（固定在底部） -->
         <div class="player-toolbar">
             <div class="container">
+                <!-- 播放进度条 -->
+                <div class="player-progress-container">
+                    <input type="range" class="player-progress" id="playerProgress" min="0" max="100" value="0" step="0.1">
+                </div>
                 <div class="row align-items-center">
                     <div class="col-md-3">
                         <div class="player-info">
@@ -1071,10 +1208,7 @@
                 return a.time - b.time;
             });
             
-            console.log(`解析歌词完成: 共 ${lyrics.length} 行, LRC格式: ${isLRC}`);
-            if (lyrics.length > 0) {
-                console.log(`时间范围: ${lyrics[0].time.toFixed(2)}s - ${lyrics[lyrics.length - 1].time.toFixed(2)}s`);
-            }
+            // 移除日志输出，减少控制台信息
             
             return lyrics;
         }
@@ -1094,7 +1228,7 @@
                 return `<div class="lyrics-line" data-time="${lyric.time}" data-index="${index}">${displayText}</div>`;
             }).join('');
             
-            console.log(`渲染歌词完成: ${lyrics.length} 行`);
+            // 移除日志输出，减少控制台信息
         }
         
         // 暂停自动滚动（用户手动操作时）
@@ -1109,7 +1243,7 @@
             // 7秒后恢复自动滚动
             lyricsScrollTimeout = setTimeout(() => {
                 lyricsAutoScrollPaused = false;
-                console.log('恢复歌词自动滚动');
+                // 移除日志输出，减少控制台信息
             }, duration);
         }
         
@@ -1194,9 +1328,9 @@
                 
                 // 如果歌词已加载，确保显示
                 if (currentLyrics.length > 0) {
-                    console.log('显示已加载的歌词');
+                    // 移除日志输出，减少控制台信息
                 } else {
-                    console.log('歌词未加载，尝试重新获取');
+                    // 移除日志输出，减少控制台信息
                     // 如果歌词未加载且有歌曲ID，尝试重新获取
                     if (currentSongId) {
                         // 优先从文件夹读取
@@ -1332,12 +1466,12 @@
         // 初始化播放列表（从页面获取所有歌曲，支持分页加载更多）
         async function initPlaylist(loadMore = false) {
             if (playlistLoading) {
-                console.log('播放列表正在加载中，跳过重复请求');
+                // 移除日志输出，减少控制台信息
                 return;
             }
             
             playlistLoading = true;
-            console.log('开始初始化播放列表...', loadMore ? '(加载更多)' : '');
+            // 移除日志输出，减少控制台信息
             
             // 如果不是加载更多，重置播放列表
             if (!loadMore) {
@@ -1358,7 +1492,7 @@
                     }
                 });
                 
-                console.log(`从页面获取到 ${playlist.length} 首歌曲`);
+                // 移除日志输出，减少控制台信息
             }
             
             // 如果没有从页面获取到，或者需要加载更多，尝试从API获取
@@ -1430,7 +1564,7 @@
                     console.error('获取播放列表失败:', error);
                     // 如果是401或403错误，静默处理
                     if (error.message && (error.message.includes('401') || error.message.includes('403'))) {
-                        console.log('API访问被拒绝，跳过API获取播放列表，将从页面按钮获取');
+                        // 移除日志输出，减少控制台信息
                         // 不抛出错误，继续使用从页面获取的列表
                     } else {
                         // 其他错误才显示提示
@@ -1467,7 +1601,7 @@
             }
             
             playlistLoading = false;
-            console.log(`播放列表初始化完成，共 ${playlist.length} 首歌曲`);
+            // 移除日志输出，减少控制台信息
         }
         
         // 加载更多歌曲到播放列表
@@ -1670,7 +1804,7 @@
             // 更新随机播放列表
             updateShuffledPlaylist();
             
-            console.log(`播放列表已设置: ${playlist.length} 首歌曲，当前索引: ${currentIndex}`);
+            // 移除日志输出，减少控制台信息
         }
         
         // 将setPlaylist暴露为全局函数
@@ -1691,6 +1825,12 @@
             
             // 先停止当前播放
             player.pause();
+            
+            // 重置进度条
+            const progressBar = document.getElementById('playerProgress');
+            if (progressBar) {
+                progressBar.value = 0;
+            }
             
             // 设置新的歌曲
             player.src = songUrl;
@@ -1771,16 +1911,16 @@
             // 从文件夹读取歌词
             if (songId) {
                 try {
-                    console.log('正在从文件夹读取歌词，歌曲ID:', songId);
+                    // 移除日志输出，减少控制台信息
                     // 优先从文件夹读取歌词文件
                     const lyricsResponse = await fetch(`/api/songs/${songId}/lyrics_file/`);
                     
                     if (lyricsResponse.ok) {
                         const lyricsData = await lyricsResponse.json();
                         if (lyricsData.lyrics && lyricsData.lyrics.trim().length > 0) {
-                            console.log('从文件读取到歌词，文件:', lyricsData.file);
+                            // 移除日志输出，减少控制台信息
                             currentLyrics = parseLyrics(lyricsData.lyrics);
-                            console.log('解析后的歌词行数:', currentLyrics.length);
+                            // 移除日志输出，减少控制台信息
                             renderLyrics(currentLyrics);
                             
                             // 根据展开状态显示歌词
@@ -1801,7 +1941,7 @@
                     }
                     
                     // 如果文件夹中没有找到，尝试从数据库读取
-                    console.log('文件夹中未找到歌词，尝试从数据库读取...');
+                    // 移除日志输出，减少控制台信息
                     const response = await fetch(`/api/songs/${songId}/`);
                     
                     if (!response.ok) {
@@ -1812,9 +1952,9 @@
                     
                     // 检查数据库中的歌词是否存在且不为空
                     if (data.lyrics && data.lyrics.trim && data.lyrics.trim().length > 0) {
-                        console.log('从数据库读取到歌词');
+                        // 移除日志输出，减少控制台信息
                         currentLyrics = parseLyrics(data.lyrics);
-                        console.log('解析后的歌词行数:', currentLyrics.length);
+                        // 移除日志输出，减少控制台信息
                         renderLyrics(currentLyrics);
                         
                         // 根据展开状态显示歌词
@@ -1831,7 +1971,7 @@
                             }, 200);
                         }
                     } else {
-                        console.log('数据库中也无歌词');
+                        // 移除日志输出，减少控制台信息
                         currentLyrics = [];
                         renderLyrics([]);
                         // 即使没有歌词，也显示折叠区域（显示"暂无歌词"）
@@ -1862,7 +2002,7 @@
                 if (!lyricsExpanded) {
                     document.getElementById('lyricsMini').classList.add('active');
                 }
-                console.log('歌曲ID为空，无法获取歌词');
+                // 移除日志输出，减少控制台信息
             }
             
             player.play();
@@ -1937,11 +2077,18 @@
         function updateTimeDisplay() {
             const player = document.getElementById('audioPlayer');
             const timeDisplay = document.getElementById('currentTime');
+            const progressBar = document.getElementById('playerProgress');
             
             if (player.duration) {
                 const current = formatTime(player.currentTime);
                 const total = formatTime(player.duration);
                 timeDisplay.textContent = `${current} / ${total}`;
+                
+                // 更新进度条（只有在用户没有拖动时才更新）
+                if (progressBar && !progressBar.dataset.isDragging) {
+                    const progress = (player.currentTime / player.duration) * 100;
+                    progressBar.value = progress;
+                }
                 
                 // 更新歌词高亮
                 if (currentLyrics.length > 0) {
@@ -1989,14 +2136,19 @@
             return cookieValue;
         }
         
-        // 保存播放器状态到 localStorage
+        // 保存播放器状态到 localStorage（优化版：减少日志，提升性能）
+        let lastSavedState = null; // 记录上次保存的状态，避免重复保存
+        
         function savePlayerState() {
             const player = document.getElementById('audioPlayer');
             const playerDiv = document.getElementById('musicPlayer');
             
             // 如果播放器未激活，不保存状态
             if (!playerDiv || !playerDiv.classList.contains('active')) {
-                localStorage.removeItem('playerState');
+                if (lastSavedState !== null) {
+                    localStorage.removeItem('playerState');
+                    lastSavedState = null;
+                }
                 return;
             }
             
@@ -2016,9 +2168,16 @@
                 timestamp: Date.now() // 保存时间戳，用于判断状态是否过期
             };
             
+            // 只在状态真正改变时才保存（避免频繁写入localStorage）
+            const stateString = JSON.stringify(state);
+            if (lastSavedState === stateString) {
+                return; // 状态未改变，不保存
+            }
+            
             try {
-                localStorage.setItem('playerState', JSON.stringify(state));
-                console.log('播放器状态已保存到 localStorage');
+                localStorage.setItem('playerState', stateString);
+                lastSavedState = stateString;
+                // 移除日志输出，减少控制台信息
             } catch (error) {
                 console.error('保存播放器状态失败:', error);
             }
@@ -2029,7 +2188,6 @@
             try {
                 const savedState = localStorage.getItem('playerState');
                 if (!savedState) {
-                    console.log('没有保存的播放器状态');
                     return false;
                 }
                 
@@ -2038,7 +2196,6 @@
                 // 检查状态是否过期（超过1小时认为过期）
                 const stateAge = Date.now() - (state.timestamp || 0);
                 if (stateAge > 3600000) { // 1小时 = 3600000毫秒
-                    console.log('保存的播放器状态已过期，清除');
                     localStorage.removeItem('playerState');
                     return false;
                 }
@@ -2054,7 +2211,7 @@
                         updateShuffledPlaylist();
                     }
                     
-                    console.log('播放列表已恢复:', playlist.length, '首歌曲');
+                    // 移除日志输出，减少控制台信息
                 }
                 
                 // 恢复播放模式（在恢复播放列表之后）
@@ -2065,7 +2222,7 @@
                         try {
                             setPlayMode(state.playMode);
                         } catch (e) {
-                            console.log('恢复播放模式UI失败，但模式已设置:', state.playMode);
+                            // 移除日志输出，减少控制台信息
                         }
                     }
                 }
@@ -2079,12 +2236,12 @@
                 if (state.songId && playlist.length > 0) {
                     const savedSong = playlist.find(song => song.id === state.songId);
                     if (!savedSong) {
-                        console.log('保存的歌曲不在播放列表中，清除状态');
+                        // 移除日志输出，减少控制台信息
                         localStorage.removeItem('playerState');
                         return false;
                     }
                     
-                    console.log('恢复播放:', savedSong.title);
+                    // 移除日志输出，减少控制台信息
                     
                     const playerDiv = document.getElementById('musicPlayer');
                     const player = document.getElementById('audioPlayer');
@@ -2138,7 +2295,7 @@
                     // 3. 恢复播放时间（在加载完成后）
                     if (state.currentTime > 0) {
                         player.currentTime = state.currentTime;
-                        console.log('播放时间已恢复到:', formatTime(state.currentTime));
+                        // 移除日志输出，减少控制台信息
                     }
                     
                     // 4. 恢复歌词展开状态（在播放前设置）
@@ -2164,7 +2321,7 @@
                         requestAnimationFrame(() => {
                             // 添加 active 类，触发 CSS 过渡动画
                             playerDiv.classList.add('active');
-                            console.log('播放器已显示（带动画）');
+                            // 移除日志输出，减少控制台信息
                         });
                     });
                     
@@ -2207,7 +2364,7 @@
             // 初始化播放列表（等待完成）
             try {
                 await initPlaylist();
-                console.log('播放列表初始化完成');
+                // 移除日志输出，减少控制台信息
             } catch (error) {
                 console.error('播放列表初始化失败:', error);
                 // 只在严重错误时显示提示，避免干扰用户
@@ -2241,6 +2398,37 @@
                     lastSaveTime = now;
                 }
             });
+            
+            // 进度条拖动事件
+            const progressBar = document.getElementById('playerProgress');
+            if (progressBar) {
+                // 拖动开始
+                progressBar.addEventListener('mousedown', function() {
+                    progressBar.dataset.isDragging = 'true';
+                });
+                
+                // 拖动中
+                progressBar.addEventListener('input', function() {
+                    if (player.duration) {
+                        const newTime = (progressBar.value / 100) * player.duration;
+                        player.currentTime = newTime;
+                    }
+                });
+                
+                // 拖动结束
+                progressBar.addEventListener('mouseup', function() {
+                    delete progressBar.dataset.isDragging;
+                });
+                
+                // 触摸事件支持（移动端）
+                progressBar.addEventListener('touchstart', function() {
+                    progressBar.dataset.isDragging = 'true';
+                });
+                
+                progressBar.addEventListener('touchend', function() {
+                    delete progressBar.dataset.isDragging;
+                });
+            }
             
             // 播放状态变化（保存状态）
             player.addEventListener('play', function() {
@@ -2635,6 +2823,108 @@
                 behavior: 'smooth'
             });
         }
+        
+        // ========== 全局解决方案：播放器打开时给body添加底部padding ==========
+        // 确保页面内容可以滚动到播放器上方，不被遮挡
+        (function() {
+            // 防止重复初始化
+            if (window._playerPaddingAdjusterInitialized) {
+                return;
+            }
+            window._playerPaddingAdjusterInitialized = true;
+            
+            const PLAYER_BOTTOM_PADDING = 700; // 播放器打开时body的底部padding（像素）
+            let lastPaddingValue = null; // 记录上一次的padding值，避免重复设置
+            let adjustTimer = null; // 防抖定时器
+            
+            function adjustBodyPaddingForPlayer() {
+                const player = document.getElementById('musicPlayer');
+                const body = document.body;
+                
+                if (!body || !player) return;
+                
+                // 如果播放器激活，给body添加底部padding
+                if (player.classList.contains('active')) {
+                    // 获取播放器的实际高度
+                    const playerHeight = player.offsetHeight || 0;
+                    // 计算需要的padding：播放器高度 + 额外安全空间
+                    const paddingValue = Math.max(PLAYER_BOTTOM_PADDING, playerHeight + 200);
+                    
+                    // 只在值改变时才设置（移除日志输出，提升性能）
+                    if (lastPaddingValue !== paddingValue) {
+                        body.style.paddingBottom = paddingValue + 'px';
+                        lastPaddingValue = paddingValue;
+                    }
+                } else {
+                    // 播放器未激活时，恢复原始padding
+                    if (lastPaddingValue !== null) {
+                        body.style.paddingBottom = '';
+                        lastPaddingValue = null;
+                    }
+                }
+            }
+            
+            // 防抖版本的调整函数
+            function debouncedAdjust() {
+                if (adjustTimer) {
+                    clearTimeout(adjustTimer);
+                }
+                adjustTimer = setTimeout(adjustBodyPaddingForPlayer, 150);
+            }
+            
+            // 初始化：页面加载后立即检查
+            function init() {
+                // 延迟执行，确保DOM完全加载
+                setTimeout(adjustBodyPaddingForPlayer, 100);
+                
+                // 监听播放器状态变化
+                const player = document.getElementById('musicPlayer');
+                if (player) {
+                    const observer = new MutationObserver(function(mutations) {
+                        let shouldAdjust = false;
+                        mutations.forEach(function(mutation) {
+                            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                                shouldAdjust = true;
+                            }
+                        });
+                        if (shouldAdjust) {
+                            debouncedAdjust();
+                        }
+                    });
+                    
+                    observer.observe(player, {
+                        attributes: true,
+                        attributeFilter: ['class']
+                    });
+                    
+                    // 也监听播放器内部元素的变化（歌词展开/折叠会影响高度）
+                    // 使用防抖，避免频繁触发
+                    const contentObserver = new MutationObserver(function() {
+                        debouncedAdjust();
+                    });
+                    contentObserver.observe(player, {
+                        childList: true,
+                        subtree: true,
+                        attributes: true,
+                        attributeFilter: ['style', 'class']
+                    });
+                }
+                
+                // 窗口大小变化时也调整（使用防抖）
+                let resizeTimer;
+                window.addEventListener('resize', function() {
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(debouncedAdjust, 200);
+                });
+            }
+            
+            // 页面加载完成后初始化
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
     </script>
     {% block extra_js %}{% endblock %}
 </body>
