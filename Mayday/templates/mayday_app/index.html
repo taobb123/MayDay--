@@ -1,5 +1,34 @@
 {% extends 'mayday_app/base.html' %}
 
+{% block extra_css %}
+<style>
+    /* 首页底部歌曲列表：固定表格布局 + 中间三列比例（歌曲略宽），长文本省略号 */
+    #song-list .table-song-layout {
+        table-layout: fixed;
+        width: 100%;
+    }
+    #song-list .table-song-layout col.col-num { width: 3%; }
+    #song-list .table-song-layout col.col-title { width: 34%; }
+    #song-list .table-song-layout col.col-artist { width: 20.5%; }
+    #song-list .table-song-layout col.col-duration { width: 7%; }
+    #song-list .table-song-layout col.col-actions { width: 15%; }
+    #song-list .table-song-layout col.col-album { width: 20.5%; }
+    #song-list .table-song-layout .song-table-ellipsis {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: middle;
+        max-width: 0; /* 配合 table-layout:fixed 让 td 尊重列宽 */
+    }
+    #song-list .table-song-layout td:not(.song-table-ellipsis) {
+        vertical-align: middle;
+    }
+    #song-list .table-song-layout .col-actions-cell {
+        white-space: nowrap;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid" data-user-authenticated="true">
     <!-- 搜索和操作按钮 -->
@@ -9,7 +38,7 @@
             <button class="btn btn-primary" onclick="showArtistsModal()" title="按首字母浏览歌手">
                 <i class="bi bi-person-lines-fill"></i> 歌手
             </button>
-            <button class="btn btn-scan" onclick="scanMusic()">
+            <button class="btn btn-scan" onclick="scanMusic(event)">
                 <i class="bi bi-folder2-open"></i> 扫描音乐
             </button>
         </div>
@@ -195,24 +224,31 @@
             </a>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover table-song-layout">
+                <colgroup>
+                    <col class="col-num">
+                    <col class="col-title">
+                    <col class="col-artist">
+                    <col class="col-duration">
+                    <col class="col-actions">
+                    <col class="col-album">
+                </colgroup>
                 <thead>
                     <tr>
                         <th>#</th>
                         <th>歌曲</th>
                         <th>艺术家</th>
-                        <th>专辑</th>
                         <th>时长</th>
                         <th>操作</th>
+                        <th>专辑</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for song in songs %}
                     <tr>
                         <td>{{ songs_start_index|add:forloop.counter0 }}</td>
-                        <td>{{ song.title }}</td>
-                        <td>{{ song.artist }}</td>
-                        <td>{{ song.album.name|default:"-" }}</td>
+                        <td class="song-table-ellipsis" title="{{ song.title|escape }}">{{ song.title }}</td>
+                        <td class="song-table-ellipsis" title="{{ song.artist|escape }}">{{ song.artist }}</td>
                         <td>
                             {% if song.duration %}
                             {{ song.duration|floatformat:0 }}秒
@@ -220,7 +256,7 @@
                             -
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="col-actions-cell">
                             <div class="btn-group" role="group">
                                 {% if song.file_path or song.original_path %}
                                 <button class="btn btn-sm btn-primary play-song-btn" 
@@ -236,6 +272,7 @@
                                 </button>
                             </div>
                         </td>
+                        <td class="song-table-ellipsis" title="{% if song.album %}{{ song.album.name|escape }}{% else %}-{% endif %}">{{ song.album.name|default:"-" }}</td>
                     </tr>
                     {% empty %}
                     <tr>

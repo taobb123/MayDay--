@@ -2141,6 +2141,21 @@
         window.setPlaylist = setPlaylist;
         window.playSong = playSong;
         
+        // 使用 Media Session API 更新系统媒体信息（标题、歌手等）
+        function updateMediaSessionMetadata(songTitle, artist) {
+            if (!('mediaSession' in navigator)) {
+                return;
+            }
+            try {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: songTitle || '未知歌曲',
+                    artist: artist || '未知艺术家'
+                });
+            } catch (e) {
+                console.warn('更新 Media Session 元数据失败:', e);
+            }
+        }
+        
         // 音乐播放器功能
         async function playSong(songUrl, songTitle, artist, songId) {
             const player = document.getElementById('audioPlayer');
@@ -2167,6 +2182,8 @@
             // 设置新的歌曲
             player.src = songUrl;
             songInfo.textContent = `${songTitle} - ${artist}`;
+            // 更新系统级媒体信息（供系统快捷键/媒体控制中心展示）
+            updateMediaSessionMetadata(songTitle, artist);
             
             // 更新收起视图的歌曲信息
             if (collapsedSongTitle) {
@@ -2831,6 +2848,41 @@
                 savePlayerState();
             });
             
+            // 如果浏览器支持 Media Session API，则接入系统级媒体控制
+            if ('mediaSession' in navigator) {
+                try {
+                    // 播放 / 暂停：映射到当前播放器
+                    navigator.mediaSession.setActionHandler('play', function() {
+                        if (player.paused) {
+                            player.play().catch(function(error) {
+                                console.error('通过 Media Session 播放失败:', error);
+                            });
+                        }
+                    });
+                    
+                    navigator.mediaSession.setActionHandler('pause', function() {
+                        if (!player.paused) {
+                            player.pause();
+                        }
+                    });
+                    
+                    // 上一首 / 下一首：直接复用现有逻辑
+                    navigator.mediaSession.setActionHandler('previoustrack', function() {
+                        if (typeof playPrevious === 'function') {
+                            playPrevious();
+                        }
+                    });
+                    
+                    navigator.mediaSession.setActionHandler('nexttrack', function() {
+                        if (typeof playNext === 'function') {
+                            playNext();
+                        }
+                    });
+                } catch (e) {
+                    console.warn('设置 Media Session 操作处理程序失败:', e);
+                }
+            }
+            
             // 播放结束，根据播放模式处理
             player.addEventListener('ended', function() {
                 if (playMode === 'single') {
@@ -2921,8 +2973,23 @@
         });
         
         // 扫描功能
-        async function scanMusic() {
-            const btn = event.target;
+        async function scanMusic(event) {
+            // 获取按钮元素：优先使用事件对象，否则查找按钮
+            let btn = null;
+            if (event && event.target) {
+                btn = event.target.closest('button') || event.target;
+            } else {
+                // 如果没有事件对象，查找扫描按钮
+                btn = document.querySelector('.btn-scan');
+            }
+            
+            if (!btn) {
+                console.error('无法找到扫描按钮');
+                showError('扫描失败：无法找到按钮元素');
+                return;
+            }
+            
+            const originalText = btn.textContent || btn.innerHTML;
             btn.disabled = true;
             btn.textContent = '扫描中...';
             
@@ -2997,8 +3064,10 @@
                 const errorMsg = error.message || '未知错误';
                 showError('扫描失败：' + errorMsg);
             } finally {
-                btn.disabled = false;
-                btn.textContent = '扫描音乐';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
             }
         }
         

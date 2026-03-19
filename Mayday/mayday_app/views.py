@@ -177,6 +177,7 @@ class ImageViewSet(viewsets.ModelViewSet):
 
 class ScanView(APIView):
     """扫描视图"""
+    permission_classes = [AllowAny]  # 允许未登录用户访问扫描功能
     
     def post(self, request):
         """触发扫描任务"""
