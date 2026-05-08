@@ -90,6 +90,10 @@
                             暂无歌单，点击创建
                         </a>
                     {% endif %}
+                    <span class="text-muted">|</span>
+                    <a href="{% url 'random_playlist' %}" class="text-decoration-none" title="随机抽取最多30首">
+                        <i class="bi bi-shuffle"></i> 随机歌单
+                    </a>
                 </div>
             </div>
         </div>
@@ -147,6 +151,16 @@
     <div class="mb-5" id="albums">
         <h2 class="mb-4"><i class="bi bi-vinyl"></i> 专辑</h2>
         <div class="album-grid">
+            <a href="{% url 'random_playlist' %}" class="album-card" style="text-decoration: none; color: inherit; display: block;">
+                <div class="album-cover d-flex align-items-center justify-content-center text-white" style="background: linear-gradient(145deg, #FFF3E6 0%, #FFD9A8 100%); color: #B86B00 !important;">
+                    <i class="bi bi-shuffle" style="font-size: 4rem;"></i>
+                </div>
+                <div class="album-info">
+                    <h5>随机歌单</h5>
+                    <p class="text-muted mb-1">每次随机最多 30 首</p>
+                    <small class="text-muted">点击生成 · 页内可刷新</small>
+                </div>
+            </a>
             {% for album in albums %}
             <a href="{% url 'album_detail' album.id %}" class="album-card" style="text-decoration: none; color: inherit; display: block;">
                 {% if album.cover_image %}

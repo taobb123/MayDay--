@@ -32,6 +32,8 @@ from .timeline import TimelineRepository
 from .messaging import message_queue
 from .pagination import AlbumPagination, TimelinePagination, SongPagination
 from datetime import datetime, timedelta
+import random
+from django.utils import timezone
 from rest_framework.views import exception_handler as drf_exception_handler
 from rest_framework.exceptions import AuthenticationFailed, PermissionDenied, NotAuthenticated
 
@@ -297,6 +299,31 @@ def album_detail(request, album_id):
     }
     
     return render(request, 'mayday_app/album_detail.html', context)
+
+
+def random_playlist_view(request):
+    """随机歌单：每次请求从曲库无放回随机抽取最多 30 首（不足则全量）。"""
+    all_ids = list(Song.objects.values_list('pk', flat=True))
+    n = min(30, len(all_ids))
+    if n == 0:
+        selected_ids = []
+    else:
+        selected_ids = random.sample(all_ids, n)
+
+    if selected_ids:
+        song_map = {
+            s.pk: s
+            for s in Song.objects.filter(pk__in=selected_ids).select_related('album')
+        }
+        songs = [song_map[i] for i in selected_ids if i in song_map]
+    else:
+        songs = []
+
+    context = {
+        'songs': songs,
+        'generated_at': timezone.localtime(timezone.now()),
+    }
+    return render(request, 'mayday_app/random_playlist.html', context)
 
 
 def play_song(request, song_id):

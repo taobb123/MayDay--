@@ -40,6 +40,7 @@ urlpatterns = [
     # 歌单页面路由
     path('playlists/', views.playlist_list_view, name='playlist_list'),
     path('playlist/<int:playlist_id>/', views.playlist_detail_view, name='playlist_detail'),
+    path('random-playlist/', views.random_playlist_view, name='random_playlist'),
     
     # 页面路由
     path('', views.index, name='index'),
