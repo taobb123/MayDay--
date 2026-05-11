@@ -2,8 +2,40 @@
 
 {% block title %}随机歌单 - 五月天音乐沉浸式{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* 随机歌单表格：固定列宽 + 歌名/艺人/专辑省略号，时长与操作不换行 */
+    #random-playlist-page .table-song-layout {
+        table-layout: fixed;
+        width: 100%;
+    }
+    #random-playlist-page .table-song-layout col.col-num { width: 3%; }
+    #random-playlist-page .table-song-layout col.col-title { width: 32%; }
+    #random-playlist-page .table-song-layout col.col-artist { width: 20%; }
+    #random-playlist-page .table-song-layout col.col-album { width: 18%; }
+    #random-playlist-page .table-song-layout col.col-duration { width: 9%; }
+    #random-playlist-page .table-song-layout col.col-actions { width: 18%; }
+    #random-playlist-page .table-song-layout .song-table-ellipsis {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: middle;
+        max-width: 0;
+    }
+    #random-playlist-page .table-song-layout td:not(.song-table-ellipsis) {
+        vertical-align: middle;
+    }
+    #random-playlist-page .table-song-layout .song-duration-cell {
+        white-space: nowrap;
+    }
+    #random-playlist-page .table-song-layout .col-actions-cell {
+        white-space: nowrap;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid" id="random-playlist-page">
     <div class="row mb-4">
         <div class="col-md-4">
             <div class="bg-gradient rounded shadow d-flex align-items-center justify-content-center"
@@ -33,7 +65,15 @@
     <div class="mt-4">
         <h3><i class="bi bi-music-note-list"></i> 歌曲列表</h3>
         <div class="table-responsive mt-3">
-            <table class="table table-hover">
+            <table class="table table-hover table-song-layout">
+                <colgroup>
+                    <col class="col-num">
+                    <col class="col-title">
+                    <col class="col-artist">
+                    <col class="col-album">
+                    <col class="col-duration">
+                    <col class="col-actions">
+                </colgroup>
                 <thead>
                     <tr>
                         <th>#</th>
@@ -48,17 +88,17 @@
                     {% for song in songs %}
                     <tr>
                         <td>{{ forloop.counter }}</td>
-                        <td><strong>{{ song.title }}</strong></td>
-                        <td>{{ song.artist }}</td>
-                        <td>{{ song.album.name|default:"-" }}</td>
-                        <td>
+                        <td class="song-table-ellipsis" title="{{ song.title|escape }}">{{ song.title }}</td>
+                        <td class="song-table-ellipsis" title="{{ song.artist|escape }}">{{ song.artist }}</td>
+                        <td class="song-table-ellipsis" title="{% if song.album %}{{ song.album.name|escape }}{% else %}-{% endif %}">{{ song.album.name|default:"-" }}</td>
+                        <td class="song-duration-cell">
                             {% if song.duration %}
                             {{ song.duration|floatformat:0 }}秒
                             {% else %}
                             -
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="col-actions-cell">
                             <div class="btn-group" role="group">
                                 {% if song.file_path or song.original_path %}
                                 <button class="btn btn-sm btn-primary play-song-btn"

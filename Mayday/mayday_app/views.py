@@ -487,7 +487,7 @@ class ArtistSearchView(APIView):
 
 
 class ArtistSongsView(APIView):
-    """根据歌手获取歌曲列表 - 最多返回12首"""
+    """根据歌手获取歌曲列表 - 返回该歌手全部歌曲"""
     permission_classes = [AllowAny]
     
     def get(self, request):
@@ -496,10 +496,9 @@ class ArtistSongsView(APIView):
         if not artist:
             return Response({'results': [], 'error': '缺少artist参数'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # 搜索该歌手的歌曲，最多12首
         songs = Song.objects.filter(
             artist__iexact=artist
-        ).select_related('album')[:12]
+        ).select_related('album')
         
         serializer = SongSerializer(songs, many=True)
         return Response({
