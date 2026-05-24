@@ -27,7 +27,7 @@ from .serializers import (
     QuoteSerializer, ImageSerializer, TimelineItemSerializer,
     PlaylistSerializer, PlaylistSongSerializer
 )
-from .scanner import MusicScannerProxy, MusicScanner
+from .scanner import MusicScannerProxy, MusicScanner, artist_identity_key
 from .timeline import TimelineRepository
 from .messaging import message_queue
 from .pagination import AlbumPagination, TimelinePagination, SongPagination
@@ -185,15 +185,16 @@ class ScanView(APIView):
         """触发扫描任务"""
         directory_path = request.data.get('directory_path', settings.MUSIC_DIRECTORY)
         
-        # 使用代理扫描器
+        # 使用代理扫描器（每次扫描清除缓存，确保写入数据库）
         scanner = MusicScannerProxy(MusicScanner())
+        scanner.clear_cache()
         
         try:
             # 发送扫描任务到消息队列（异步处理）
             message_queue.send_scan_task(directory_path)
             
             # 也可以同步扫描
-            songs = scanner.scan_directory(directory_path)
+            songs = scanner.scan_directory(directory_path, use_cache=False)
             
             return Response({
                 'status': 'success',
@@ -455,27 +456,29 @@ class ArtistSearchView(APIView):
         if not query:
             return Response({'artists': []})
         
-        # 获取所有不重复的歌手名称
+        query_key = artist_identity_key(query)
         artists = Song.objects.values_list('artist', flat=True).distinct()
         
-        # 过滤：支持名称模糊查询
+        # 过滤：支持名称模糊查询；同一拼音归并为同一歌手
         matching_artists = []
+        seen_keys = set()
         query_lower = query.lower()
         
         for artist in artists:
-            if artist and query_lower in artist.lower():
+            if not artist:
+                continue
+            key = artist_identity_key(artist)
+            if key in seen_keys:
+                continue
+            name_match = query_lower in artist.lower()
+            key_match = query_key and query_key == key
+            initial_match = (
+                len(query) == 1
+                and Song.objects.filter(artist=artist, artist_initial__iexact=query).exists()
+            )
+            if name_match or key_match or initial_match:
                 matching_artists.append(artist)
-        
-        # 如果查询是单个字符，也支持首字母搜索
-        if len(query) == 1:
-            # 获取首字母（支持英文首字母）
-            for artist in artists:
-                if artist:
-                    # 检查英文首字母（不区分大小写）
-                    first_char = artist[0].lower()
-                    if first_char == query_lower:
-                        if artist not in matching_artists:
-                            matching_artists.append(artist)
+                seen_keys.add(key)
         
         # 去重并排序
         matching_artists = sorted(list(set(matching_artists)))
@@ -496,7 +499,10 @@ class ArtistSongsView(APIView):
         if not artist:
             return Response({'results': [], 'error': '缺少artist参数'}, status=status.HTTP_400_BAD_REQUEST)
         
+        identity = artist_identity_key(artist)
         songs = Song.objects.filter(
+            Q(artist__iexact=artist) | Q(artist_pinyin__iexact=identity)
+        ).select_related('album') if identity else Song.objects.filter(
             artist__iexact=artist
         ).select_related('album')
         
@@ -514,54 +520,43 @@ class ArtistsByInitialView(APIView):
     
     def get(self, request):
         """返回按首字母分组的歌手列表"""
-        # 获取所有不重复的歌手，包含拼音信息
-        artists_data = Song.objects.values('artist', 'artist_pinyin', 'artist_initial').distinct()
-        
-        # 按首字母分组
+        # 按歌手去重（同一拼音视为同一歌手，避免简繁体重复条目）
         artists_by_initial = {}
-        for item in artists_data:
-            artist = item['artist']
+        seen_identity = set()
+        for artist in Song.objects.values_list('artist', flat=True).distinct():
             if not artist:
                 continue
+            identity = artist_identity_key(artist)
+            if identity in seen_identity:
+                continue
+            seen_identity.add(identity)
             
-            # 获取首字母，如果没有则尝试生成
-            initial = item['artist_initial'] or ''
+            row = Song.objects.filter(artist=artist).values(
+                'artist_pinyin', 'artist_initial'
+            ).first() or {}
+            initial = (row.get('artist_initial') or '').strip()
+            pinyin = (row.get('artist_pinyin') or '').strip()
+            if not initial and pinyin:
+                initial = pinyin[0].upper()
             if not initial:
-                # 如果没有首字母，尝试从拼音获取
-                pinyin = item['artist_pinyin'] or ''
-                if pinyin:
-                    initial = pinyin[0].upper()
-                else:
-                    # 如果拼音字段也为空，使用pypinyin实时生成
-                    try:
-                        from pypinyin import lazy_pinyin, Style
-                        pinyin_list = lazy_pinyin(artist, style=Style.NORMAL)
-                        if pinyin_list and pinyin_list[0]:
-                            # 获取第一个字符的拼音首字母
-                            initial = pinyin_list[0][0].upper() if pinyin_list[0] else ''
-                        else:
-                            # 如果是英文，直接取首字母
-                            initial = artist[0].upper() if artist else ''
-                    except ImportError:
-                        # 如果pypinyin未安装，对于英文直接取首字母，中文归类到"#"
-                        if artist and artist[0].isalpha():
-                            initial = artist[0].upper()
-                        else:
-                            initial = '#'
+                try:
+                    from pypinyin import lazy_pinyin, Style
+                    pinyin_list = lazy_pinyin(artist, style=Style.NORMAL)
+                    if pinyin_list and pinyin_list[0]:
+                        initial = pinyin_list[0][0].upper()
+                    elif artist and artist[0].isalpha():
+                        initial = artist[0].upper()
+                    else:
+                        initial = '#'
+                except ImportError:
+                    initial = artist[0].upper() if artist and artist[0].isalpha() else '#'
             
-            # 确保首字母是A-Z
             if initial and initial.isalpha() and initial.isascii():
                 initial = initial.upper()
             else:
-                # 如果不是字母，归类到"#"
                 initial = '#'
             
-            if initial not in artists_by_initial:
-                artists_by_initial[initial] = []
-            
-            # 避免重复添加
-            if artist not in artists_by_initial[initial]:
-                artists_by_initial[initial].append(artist)
+            artists_by_initial.setdefault(initial, []).append(artist)
         
         # 对每个首字母下的歌手进行排序
         for initial in artists_by_initial:

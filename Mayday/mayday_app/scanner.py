@@ -11,6 +11,14 @@ from django.conf import settings
 from .interfaces import MusicScannerInterface
 from .models import Song, Album
 
+def artist_identity_key(artist: str) -> str:
+    """用于关联同一歌手的不同写法（如简繁体）"""
+    pinyin, _ = _generate_pinyin_fields(artist)
+    if pinyin:
+        return pinyin.lower()
+    return (artist or '').strip().lower()
+
+
 def _generate_pinyin_fields(artist: str) -> tuple[str, str]:
     """生成歌手的拼音和首字母"""
     try:
@@ -50,6 +58,66 @@ class MusicScanner(MusicScannerInterface):
     
     def __init__(self, directory_path: Optional[str] = None):
         self.directory_path = directory_path or settings.MUSIC_DIRECTORY
+        self._scan_root: Optional[str] = None
+        self._path_index: Optional[Dict[str, int]] = None
+    
+    def _default_artist(self) -> str:
+        """方案 A：元信息无艺术家时，使用扫描根目录的文件夹名"""
+        root = self._scan_root or self.directory_path
+        if root:
+            name = Path(root).name.strip()
+            if name:
+                return name
+        return '未知艺术家'
+    
+    def _resolve_artist(self, tag_artist: Optional[str]) -> str:
+        """优先使用元信息艺术家，否则使用扫描根目录名"""
+        if tag_artist and str(tag_artist).strip():
+            return str(tag_artist).strip()
+        return self._default_artist()
+    
+    def _canonical_artist(self, tag_artist: Optional[str]) -> str:
+        """入库用艺术家名：与扫描根目录仅简繁差异时统一为文件夹名"""
+        resolved = self._resolve_artist(tag_artist)
+        folder = self._default_artist()
+        if folder == '未知艺术家':
+            return resolved
+        if artist_identity_key(resolved) == artist_identity_key(folder):
+            return folder
+        return resolved
+    
+    def _path_variants(self, file_path: Path) -> List[str]:
+        """生成用于匹配的路径变体（resolve / absolute）"""
+        variants: List[str] = []
+        for getter in (lambda: file_path.resolve(), lambda: file_path.absolute()):
+            try:
+                variants.append(str(getter()))
+            except (OSError, RuntimeError):
+                pass
+        return list(dict.fromkeys(variants))
+    
+    def _build_path_index(self) -> None:
+        """扫描前构建路径索引，加速按路径查找"""
+        self._path_index = {}
+        for row in Song.objects.exclude(original_path='').values('id', 'original_path'):
+            path = row['original_path']
+            self._path_index[path] = row['id']
+            if os.name == 'nt':
+                self._path_index[os.path.normcase(path)] = row['id']
+    
+    def _find_song_by_path(self, path_variants: List[str]) -> Optional[Song]:
+        """仅按文件路径查找已有歌曲（避免标题+艺术家误匹配其它文件）"""
+        for path_str in path_variants:
+            song = Song.objects.filter(original_path=path_str).first()
+            if song:
+                return song
+            if self._path_index is not None:
+                song_id = self._path_index.get(path_str)
+                if song_id is None and os.name == 'nt':
+                    song_id = self._path_index.get(os.path.normcase(path_str))
+                if song_id is not None:
+                    return Song.objects.filter(pk=song_id).first()
+        return None
     
     def scan_directory(self, directory_path: str) -> List[Song]:
         """扫描目录并返回歌曲列表"""
@@ -59,19 +127,25 @@ class MusicScanner(MusicScannerInterface):
         if not path.exists():
             return songs
         
-        # 递归扫描所有音频文件
-        for file_path in path.rglob('*'):
-            # 确保是文件而不是目录
-            if file_path.is_file() and file_path.suffix.lower() in self.SUPPORTED_FORMATS:
-                try:
-                    metadata = self.extract_metadata(str(file_path))
-                    if metadata:
-                        # 创建或更新歌曲记录
-                        song = self._create_or_update_song(file_path, metadata)
-                        if song:
-                            songs.append(song)
-                except Exception as e:
-                    print(f"Error processing {file_path}: {e}")
+        self._scan_root = directory_path
+        self._build_path_index()
+        try:
+            # 递归扫描所有音频文件
+            for file_path in path.rglob('*'):
+                # 确保是文件而不是目录
+                if file_path.is_file() and file_path.suffix.lower() in self.SUPPORTED_FORMATS:
+                    try:
+                        metadata = self.extract_metadata(str(file_path))
+                        if metadata:
+                            # 创建或更新歌曲记录
+                            song = self._create_or_update_song(file_path, metadata)
+                            if song:
+                                songs.append(song)
+                    except Exception as e:
+                        print(f"Error processing {file_path}: {e}")
+        finally:
+            self._scan_root = None
+            self._path_index = None
         
         return songs
     
@@ -82,10 +156,24 @@ class MusicScanner(MusicScannerInterface):
             if audio_file is None:
                 return {}
             
+            tag_artist = (
+                self._get_tag(audio_file, 'TPE1')
+                or self._get_tag(audio_file, 'ARTIST')
+                or self._get_tag(audio_file, 'artist')
+            )
             metadata = {
-                'title': self._get_tag(audio_file, 'TIT2') or self._get_tag(audio_file, 'TITLE') or Path(file_path).stem,
-                'artist': self._get_tag(audio_file, 'TPE1') or self._get_tag(audio_file, 'ARTIST') or '五月天',
-                'album': self._get_tag(audio_file, 'TALB') or self._get_tag(audio_file, 'ALBUM'),
+                'title': (
+                    self._get_tag(audio_file, 'TIT2')
+                    or self._get_tag(audio_file, 'TITLE')
+                    or self._get_tag(audio_file, 'title')
+                    or Path(file_path).stem
+                ),
+                'artist': self._canonical_artist(tag_artist),
+                'album': (
+                    self._get_tag(audio_file, 'TALB')
+                    or self._get_tag(audio_file, 'ALBUM')
+                    or self._get_tag(audio_file, 'album')
+                ),
                 'track_number': self._get_tag(audio_file, 'TRCK') or self._get_tag(audio_file, 'TRACKNUMBER'),
                 'duration': audio_file.info.length if hasattr(audio_file.info, 'length') else None,
             }
@@ -111,7 +199,7 @@ class MusicScanner(MusicScannerInterface):
             # 返回基本元数据，确保文件仍然可以被添加到数据库
             return {
                 'title': Path(file_path).stem,
-                'artist': '五月天',
+                'artist': self._canonical_artist(None),
                 'album': None,
                 'track_number': None,
                 'duration': None,
@@ -168,35 +256,13 @@ class MusicScanner(MusicScannerInterface):
                     # 注意：禁止创建新专辑
                     # 如果专辑不存在，album保持为None，歌曲将不关联任何专辑
             
-            # 规范化文件路径（统一路径格式）
-            try:
-                # 使用绝对路径，统一路径格式
-                original_path_str = str(file_path.resolve())
-            except (OSError, RuntimeError):
-                # 如果无法解析路径，使用原始路径
-                original_path_str = str(file_path.absolute())
+            path_variants = self._path_variants(file_path)
+            original_path_str = path_variants[0] if path_variants else str(file_path)
             
-            # 首先尝试用 original_path 匹配
-            song = Song.objects.filter(original_path=original_path_str).first()
+            # 仅按路径匹配已有记录，避免标题+艺术家误关联到其它文件
+            song = self._find_song_by_path(path_variants)
             
-            # 如果找不到，尝试用标题、艺术家和专辑匹配（避免重复创建）
-            if not song:
-                title = metadata.get('title', file_path.stem)
-                artist = metadata.get('artist', '五月天')
-                
-                # 查找相同标题、艺术家和专辑的歌曲
-                query = Song.objects.filter(
-                    title=title,
-                    artist=artist
-                )
-                if album:
-                    query = query.filter(album=album)
-                else:
-                    query = query.filter(album__isnull=True)
-                
-                song = query.first()
-            
-            artist = metadata.get('artist', '五月天')
+            artist = metadata.get('artist') or self._canonical_artist(None)
             # 生成拼音字段
             artist_pinyin, artist_initial = _generate_pinyin_fields(artist)
             
@@ -211,6 +277,10 @@ class MusicScanner(MusicScannerInterface):
                 song.track_number = metadata.get('track_number')
                 song.original_path = original_path_str  # 更新路径
                 song.save()
+                if self._path_index is not None:
+                    self._path_index[original_path_str] = song.pk
+                    if os.name == 'nt':
+                        self._path_index[os.path.normcase(original_path_str)] = song.pk
             else:
                 # 创建新记录
                 song = Song.objects.create(
@@ -223,6 +293,10 @@ class MusicScanner(MusicScannerInterface):
                     track_number=metadata.get('track_number'),
                     original_path=original_path_str,
                 )
+                if self._path_index is not None:
+                    self._path_index[original_path_str] = song.pk
+                    if os.name == 'nt':
+                        self._path_index[os.path.normcase(original_path_str)] = song.pk
             
             return song
         except Exception as e:

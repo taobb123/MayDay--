@@ -104,31 +104,21 @@ class Song(models.Model):
         return self.duration
     
     def save(self, *args, **kwargs):
-        """保存时自动填充拼音字段"""
-        # 如果拼音字段为空，自动生成
-        if not self.artist_pinyin or not self.artist_initial:
+        """保存时自动填充/同步歌手拼音字段"""
+        if self.artist:
             try:
                 from pypinyin import lazy_pinyin, Style
                 
-                if self.artist:
-                    # 生成拼音
-                    pinyin_list = lazy_pinyin(self.artist, style=Style.NORMAL)
-                    pinyin = ''.join(pinyin_list)
-                    
-                    # 获取首字母
-                    if pinyin:
-                        initial = pinyin[0].upper()
-                    else:
-                        # 如果是英文，直接取首字母
-                        initial = self.artist[0].upper() if self.artist else ''
-                    
-                    # 只更新空字段
-                    if not self.artist_pinyin:
-                        self.artist_pinyin = pinyin
-                    if not self.artist_initial:
-                        self.artist_initial = initial
+                pinyin_list = lazy_pinyin(self.artist, style=Style.NORMAL)
+                pinyin = ''.join(pinyin_list)
+                initial = pinyin[0].upper() if pinyin else (
+                    self.artist[0].upper() if self.artist else ''
+                )
+                # 艺术家变更时同步拼音，保证按歌手查询能关联到歌曲
+                if not self.pk or self.artist_pinyin != pinyin:
+                    self.artist_pinyin = pinyin
+                    self.artist_initial = initial
             except ImportError:
-                # 如果pypinyin未安装，跳过
                 pass
         
         super().save(*args, **kwargs)
