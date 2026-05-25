@@ -149,8 +149,8 @@
             transform: translateY(0);
         }
         
-        /* 播放器收起状态 - 只隐藏工具栏，保留歌词 */
-        .music-player.collapsed {
+        /* 播放器固定为收起条形态（无展开工具栏） */
+        .music-player.active {
             max-height: none;
             height: auto;
             overflow: visible;
@@ -160,64 +160,44 @@
             right: 0;
             margin: 0;
             padding: 0;
+            flex-direction: column;
         }
         
-        /* 收起时只隐藏播放器工具栏，保留歌词显示 */
-        .music-player.collapsed .player-toolbar {
-            display: none !important;
-        }
-        
-        /* 收起时只显示迷你版歌词，隐藏展开的歌词容器 */
-        .music-player.collapsed .lyrics-container {
-            display: none !important;
-        }
-        
-        .music-player.collapsed .lyrics-mini {
+        .music-player.active .lyrics-mini {
+            order: -1;
             display: flex !important;
             visibility: visible !important;
             opacity: 1 !important;
         }
         
-        .music-player.collapsed .lyrics-mini.active {
+        .music-player.active .lyrics-mini.active {
             display: flex !important;
         }
         
-        /* 旋转唱片图标容器 - 收起时显示在底部 */
+        .music-player.active .queue-panel {
+            order: 0;
+        }
+        
+        .music-player.active .player-collapsed-view {
+            order: 1;
+            display: flex !important;
+        }
+        
+        /* 旋转唱片图标容器 - 底部控制条 */
         .player-collapsed-view {
             display: none;
             position: relative;
             width: 100%;
-            height: 70px;
+            min-height: 70px;
             background: var(--bg-surface);
             border-top: 1px solid var(--bg-divider);
             align-items: center;
             justify-content: flex-start;
-            padding: 0 20px;
-            cursor: pointer;
+            padding: 0 12px 0 16px;
+            flex-wrap: nowrap;
+            gap: 4px;
             box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
             flex-shrink: 0;
-        }
-        
-        .music-player.collapsed .player-collapsed-view {
-            display: flex !important;
-        }
-        
-        /* 收起时歌词区域在旋转唱片上方 */
-        .music-player.collapsed {
-            flex-direction: column;
-        }
-        
-        .music-player.collapsed .lyrics-mini {
-            order: -1;
-        }
-        
-        .music-player.collapsed .lyrics-container {
-            order: -1;
-            display: none !important;
-        }
-        
-        .music-player.collapsed .player-collapsed-view {
-            order: 1;
         }
         
         /* 旋转唱片样式 */
@@ -358,29 +338,48 @@
             color: var(--primary);
         }
         
-        /* 展开按钮 */
-        .expand-player-btn {
-            margin-left: auto;
-            margin-right: 10px;
-            background: var(--primary);
-            border: none;
-            color: #FFFFFF;
-            padding: 6px 14px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.3s ease;
+        /* 收起条：播放模式图标组 */
+        .collapsed-play-modes {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 6px;
+            flex-shrink: 0;
         }
         
-        .expand-player-btn:hover {
+        .collapsed-mode-btn {
+            background: var(--bg-primary);
+            border: 1px solid var(--bg-divider);
+            color: var(--text-muted);
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            padding: 0;
+        }
+        
+        .collapsed-mode-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--bg-surface);
+        }
+        
+        .collapsed-mode-btn.active {
             background: var(--primary);
-            opacity: 0.9;
-            transform: scale(1.05);
+            border-color: var(--primary);
+            color: #FFFFFF;
+            box-shadow: 0 2px 6px rgba(74, 108, 247, 0.35);
         }
         
         /* 关闭播放器按钮 */
         .close-player-btn {
-            margin-left: 10px;
+            margin-left: auto;
+            flex-shrink: 0;
             background: var(--accent);
             border: none;
             color: #FFFFFF;
@@ -395,6 +394,148 @@
             background: var(--accent);
             opacity: 0.9;
             transform: scale(1.05);
+        }
+        
+        /* 收起条：播放队列按钮 */
+        .queue-list-btn {
+            white-space: nowrap;
+            font-size: 12px;
+            gap: 4px;
+        }
+        
+        .queue-list-btn.active {
+            background: rgba(74, 108, 247, 0.12);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        /* 播放队列面板（收起态，按 playlist 原始顺序） */
+        .queue-panel {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            max-height: min(40vh, 320px);
+            background: var(--bg-primary);
+            border-top: 1px solid var(--bg-divider);
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+            flex-shrink: 0;
+        }
+        
+        .music-player.active .queue-panel.show {
+            display: flex;
+        }
+        
+        .queue-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--bg-divider);
+            background: var(--bg-surface);
+            flex-shrink: 0;
+        }
+        
+        .queue-panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .queue-panel-count {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-left: 8px;
+        }
+        
+        .queue-panel-close {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+        }
+        
+        .queue-panel-close:hover {
+            background: var(--bg-muted);
+            color: var(--text-primary);
+        }
+        
+        .queue-panel-list {
+            overflow-y: auto;
+            flex: 1;
+            padding: 6px 0;
+        }
+        
+        .queue-panel-empty {
+            padding: 24px 16px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+        
+        .queue-panel-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+            color: var(--text-primary);
+        }
+        
+        .queue-panel-item:hover {
+            background: var(--bg-surface);
+        }
+        
+        .queue-panel-item.active {
+            background: rgba(74, 108, 247, 0.1);
+        }
+        
+        .queue-panel-item-num {
+            flex-shrink: 0;
+            width: 24px;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+        
+        .queue-panel-item.active .queue-panel-item-num {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .queue-panel-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .queue-panel-item-title {
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .queue-panel-item-artist {
+            font-size: 12px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .queue-panel-item-playing {
+            flex-shrink: 0;
+            color: var(--primary);
+            font-size: 14px;
         }
         
         .player-toolbar {
@@ -1333,14 +1474,26 @@
     
     <!-- 音乐播放器 -->
     <div class="music-player" id="musicPlayer">
-        <!-- 收起状态：旋转唱片视图 -->
+        <!-- 播放队列面板（收起态，playlist 原始顺序） -->
+        <div class="queue-panel" id="queuePanel">
+            <div class="queue-panel-header">
+                <div>
+                    <span class="queue-panel-title">播放列表</span>
+                    <span class="queue-panel-count" id="queuePanelCount"></span>
+                </div>
+                <button type="button" class="queue-panel-close" onclick="event.stopPropagation(); toggleQueuePanel(false);" title="关闭列表" aria-label="关闭列表">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="queue-panel-list" id="queuePanelList"></div>
+        </div>
+        <!-- 底部控制条 -->
         <div class="player-collapsed-view">
-            <div class="rotating-record" onclick="togglePlayerCollapse()"></div>
-            <div class="record-info" onclick="togglePlayerCollapse()">
+            <div class="rotating-record"></div>
+            <div class="record-info">
                 <div class="song-title" id="collapsedSongTitle">未选择歌曲</div>
                 <div class="song-artist" id="collapsedSongArtist">--</div>
             </div>
-            <!-- 收起视图的控制按钮 -->
             <div class="collapsed-controls">
                 <button class="collapsed-btn collapsed-btn-secondary" onclick="event.stopPropagation(); playPrevious();" title="上一首">
                     <i class="bi bi-skip-backward-fill"></i>
@@ -1351,97 +1504,39 @@
                 <button class="collapsed-btn collapsed-btn-secondary" onclick="event.stopPropagation(); playNext();" title="下一首">
                     <i class="bi bi-skip-forward-fill"></i>
                 </button>
+                <button class="collapsed-btn collapsed-btn-secondary queue-list-btn" id="queueListBtn" onclick="event.stopPropagation(); toggleQueuePanel();" title="查看播放列表">
+                    <i class="bi bi-list-ul"></i> 列表
+                </button>
             </div>
-            <button class="expand-player-btn" onclick="event.stopPropagation(); togglePlayerCollapse();">
-                <i class="bi bi-chevron-up"></i> 展开
-            </button>
+            <div class="collapsed-play-modes" id="collapsedPlayModes">
+                <button type="button" class="collapsed-mode-btn active" data-mode="sequential" onclick="event.stopPropagation(); setPlayMode('sequential');" title="顺序播放">
+                    <i class="bi bi-list-ol"></i>
+                </button>
+                <button type="button" class="collapsed-mode-btn" data-mode="loop" onclick="event.stopPropagation(); setPlayMode('loop');" title="列表循环">
+                    <i class="bi bi-arrow-repeat"></i>
+                </button>
+                <button type="button" class="collapsed-mode-btn" data-mode="single" onclick="event.stopPropagation(); setPlayMode('single');" title="单曲循环">
+                    <i class="bi bi-repeat-1"></i>
+                </button>
+                <button type="button" class="collapsed-mode-btn" data-mode="random" onclick="event.stopPropagation(); setPlayMode('random');" title="随机播放">
+                    <i class="bi bi-shuffle"></i>
+                </button>
+            </div>
             <button class="close-player-btn" onclick="event.stopPropagation(); closePlayer();">
                 <i class="bi bi-x-lg"></i> 关闭
             </button>
         </div>
         
-        <!-- 歌词迷你模式（折叠时只显示当前行） -->
+        <!-- 歌词迷你模式（仅显示当前行） -->
         <div class="lyrics-mini" id="lyricsMini">
             <div class="lyrics-mini-content" id="lyricsMiniContent">
                 <div class="lyrics-mini-line current" id="currentLyricLine">暂无歌词</div>
             </div>
         </div>
-        <!-- 歌词显示区域（展开时显示，位于工具栏上方） -->
-        <div class="lyrics-container" id="lyricsContainer" style="display: none;">
-            <div id="lyricsContent" class="lyrics-empty">暂无歌词</div>
-        </div>
-        <!-- 播放器工具栏（固定在底部） -->
-        <div class="player-toolbar">
-            <div class="container">
-                <div class="row align-items-center">
-                    <!-- 歌曲信息区域 -->
-                    <div class="col-md-4">
-                        <div class="player-info">
-                            <div id="currentSongInfo" style="font-weight: 500; margin-bottom: 5px; font-size: 16px;">未选择歌曲</div>
-                            <small class="text-muted" id="currentTime" style="font-size: 13px;">00:00 / 00:00</small>
-                        </div>
-                    </div>
-                    <!-- 控制按钮区域 -->
-                    <div class="col-md-8">
-                        <div class="player-controls">
-                            <button class="player-btn player-btn-secondary" onclick="playPrevious()" id="prevBtn" title="上一首">
-                                <i class="bi bi-skip-backward-fill"></i>
-                            </button>
-                            <button class="player-btn player-btn-primary" onclick="togglePlayPause()" id="playPauseBtn" title="播放/暂停">
-                                <i class="bi bi-pause-fill"></i>
-                            </button>
-                            <button class="player-btn player-btn-secondary" onclick="playNext()" id="nextBtn" title="下一首">
-                                <i class="bi bi-skip-forward-fill"></i>
-                            </button>
-                            <audio id="audioPlayer" style="display: none;">
-                                您的浏览器不支持音频播放
-                            </audio>
-                            <div class="play-mode-btn" style="position: relative;">
-                                <button class="player-btn player-btn-secondary play-mode-btn" onclick="togglePlayModeMenu()" id="playModeBtn" title="播放模式">
-                                    <i class="bi bi-arrow-repeat" id="playModeIcon"></i>
-                                    <span id="playModeText" style="margin-left: 5px; font-size: 13px;">顺序</span>
-                                </button>
-                            <div class="play-mode-menu" id="playModeMenu">
-                                <div class="play-mode-item active" data-mode="sequential" onclick="setPlayMode('sequential')">
-                                    <i class="bi bi-list-ol"></i>
-                                    <span>顺序播放</span>
-                                </div>
-                                <div class="play-mode-item" data-mode="loop" onclick="setPlayMode('loop')">
-                                    <i class="bi bi-arrow-repeat"></i>
-                                    <span>列表循环</span>
-                                </div>
-                                <div class="play-mode-item" data-mode="single" onclick="setPlayMode('single')">
-                                    <i class="bi bi-arrow-repeat"></i>
-                                    <span>单曲循环</span>
-                                </div>
-                                <div class="play-mode-item" data-mode="random" onclick="setPlayMode('random')">
-                                    <i class="bi bi-shuffle"></i>
-                                    <span>随机播放</span>
-                                </div>
-                            </div>
-                            </div>
-                            <button class="player-btn player-btn-secondary" onclick="toggleLyrics()" id="toggleLyricsBtn" title="展开/折叠歌词">
-                                <i class="bi bi-file-text"></i>
-                            </button>
-                            <button class="player-btn player-btn-secondary" onclick="loadMoreSongs()" id="loadMoreBtn" title="加载更多歌曲" style="display: none;">
-                                <i class="bi bi-arrow-down-circle"></i>
-                                <span style="margin-left: 5px; font-size: 13px;">加载更多</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <!-- 播放进度条 - 放在底部 -->
-                <div class="player-progress-container">
-                    <!-- 收起按钮 - 位于进度条上方 -->
-                    <div class="player-close-container">
-                        <button class="btn btn-sm btn-secondary" onclick="togglePlayerCollapse()" title="收起播放器">
-                            <i class="bi bi-chevron-down"></i> 收起
-                        </button>
-                    </div>
-                    <input type="range" class="player-progress" id="playerProgress" min="0" max="100" value="0" step="0.1">
-                </div>
-            </div>
-        </div>
+        <!-- 隐藏：音频与歌词数据（供脚本使用，无 UI） -->
+        <audio id="audioPlayer" style="display: none;">您的浏览器不支持音频播放</audio>
+        <span id="currentSongInfo" class="d-none" aria-hidden="true"></span>
+        <div id="lyricsStore" class="d-none" aria-hidden="true"><div id="lyricsContent"></div></div>
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -1457,7 +1552,7 @@
         let lyricsAutoScrollPaused = false; // 歌词自动滚动是否暂停
         let lyricsScrollTimeout = null; // 恢复自动滚动的定时器
         let isProgramScrolling = false; // 标记是否是程序触发的滚动
-        let lyricsExpanded = false; // 歌词是否展开
+        let queuePanelOpen = false; // 播放队列面板是否展开
         
         // 解析歌词（支持LRC格式和纯文本，完整解析所有行）
         function parseLyrics(lyricsText) {
@@ -1605,99 +1700,7 @@
                 }
             });
             
-            // 如果歌词处于折叠模式，更新迷你模式的显示
-            if (!lyricsExpanded && activeIndex >= 0) {
-                updateMiniLyric();
-            }
-            
-            // 如果自动滚动被暂停（用户手动操作），不执行自动滚动
-            if (lyricsAutoScrollPaused) {
-                return;
-            }
-            
-            // 只有当当前行不在可视区域时才自动滚动（不强制，允许用户手动滚动）
             if (activeIndex >= 0) {
-                const activeLine = lines[activeIndex];
-                const container = document.getElementById('lyricsContainer');
-                const containerRect = container.getBoundingClientRect();
-                const lineRect = activeLine.getBoundingClientRect();
-                
-                // 检查当前行是否在可视区域
-                const isVisible = lineRect.top >= containerRect.top && 
-                                 lineRect.bottom <= containerRect.bottom;
-                
-                // 如果不在可视区域，平滑滚动到可见位置（但不强制居中）
-                if (!isVisible) {
-                    setTimeout(() => {
-                        // 再次检查是否被暂停
-                        if (!lyricsAutoScrollPaused) {
-                            isProgramScrolling = true;
-                            activeLine.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                            // 滚动完成后重置标志
-                            setTimeout(() => {
-                                isProgramScrolling = false;
-                            }, 500);
-                        }
-                    }, 200);
-                }
-            }
-        }
-        
-        // 切换歌词展开/折叠
-        function toggleLyrics() {
-            lyricsExpanded = !lyricsExpanded;
-            const container = document.getElementById('lyricsContainer');
-            const miniContainer = document.getElementById('lyricsMini');
-            const btn = document.getElementById('toggleLyricsBtn');
-            
-            if (lyricsExpanded) {
-                // 展开模式：显示完整歌词区域，隐藏迷你模式
-                container.style.display = 'block';
-                miniContainer.classList.remove('active');
-                btn.classList.add('active');
-                
-                // 如果歌词已加载，确保显示
-                if (currentLyrics.length > 0) {
-                    // 移除日志输出，减少控制台信息
-                } else {
-                    // 移除日志输出，减少控制台信息
-                    // 如果歌词未加载且有歌曲ID，尝试重新获取
-                    if (currentSongId) {
-                        // 优先从文件夹读取
-                        fetch(`/api/songs/${currentSongId}/lyrics_file/`)
-                            .then(response => {
-                                if (response.ok) {
-                                    return response.json().then(data => {
-                                        if (data.lyrics && data.lyrics.trim().length > 0) {
-                                            currentLyrics = parseLyrics(data.lyrics);
-                                            renderLyrics(currentLyrics);
-                                            return;
-                                        }
-                                        throw new Error('歌词为空');
-                                    });
-                                }
-                                throw new Error('未找到歌词文件');
-                            })
-                            .catch(() => {
-                                // 如果文件夹中没有，尝试从数据库读取
-                                return fetch(`/api/songs/${currentSongId}/`)
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.lyrics && data.lyrics.trim && data.lyrics.trim().length > 0) {
-                                            currentLyrics = parseLyrics(data.lyrics);
-                                            renderLyrics(currentLyrics);
-                                        }
-                                    });
-                            })
-                            .catch(error => console.error('重新获取歌词失败:', error));
-                    }
-                }
-            } else {
-                // 折叠模式：隐藏完整歌词区域，显示迷你模式
-                container.style.display = 'none';
-                miniContainer.classList.add('active');
-                btn.classList.remove('active');
-                // 更新迷你模式的当前歌词
                 updateMiniLyric();
             }
         }
@@ -2059,56 +2062,33 @@
             }
         }
         
-        // 设置播放模式
+        // 设置播放模式（收起条四图标）
         function setPlayMode(mode) {
             playMode = mode;
-            
-            // 更新UI
-            const menuItems = document.querySelectorAll('.play-mode-item');
-            menuItems.forEach(item => {
-                item.classList.remove('active');
-                if (item.dataset.mode === mode) {
-                    item.classList.add('active');
-                }
+            document.querySelectorAll('.collapsed-mode-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
             });
-            
-            // 更新按钮显示
-            const modeText = document.getElementById('playModeText');
-            const modeIcon = document.getElementById('playModeIcon');
-            
-            if (mode === 'sequential') {
-                modeText.textContent = '顺序';
-                modeIcon.className = 'bi bi-list-ol';
-            } else if (mode === 'loop') {
-                modeText.textContent = '列表循环';
-                modeIcon.className = 'bi bi-arrow-repeat';
-            } else if (mode === 'single') {
-                modeText.textContent = '单曲循环';
-                modeIcon.className = 'bi bi-arrow-repeat';
-            } else if (mode === 'random') {
-                modeText.textContent = '随机';
-                modeIcon.className = 'bi bi-shuffle';
+            if (mode === 'random') {
                 updateShuffledPlaylist();
             }
-            
-            // 关闭菜单
-            document.getElementById('playModeMenu').classList.remove('show');
         }
         
-        // 切换播放模式菜单
-        function togglePlayModeMenu() {
-            const menu = document.getElementById('playModeMenu');
-            menu.classList.toggle('show');
-        }
-        
-        // 点击外部关闭菜单
-        document.addEventListener('click', function(e) {
-            const menu = document.getElementById('playModeMenu');
-            const btn = document.getElementById('playModeBtn');
-            if (menu && !menu.contains(e.target) && !btn.contains(e.target)) {
-                menu.classList.remove('show');
+        function updatePlayPauseButtons(isPlaying) {
+            const collapsedBtn = document.getElementById('collapsedPlayPauseBtn');
+            const iconClass = isPlaying ? 'bi-pause-fill' : 'bi-play-fill';
+            if (collapsedBtn) {
+                collapsedBtn.innerHTML = `<i class="bi ${iconClass}"></i>`;
             }
-        });
+        }
+        
+        function showMiniLyrics() {
+            const lyricsMini = document.getElementById('lyricsMini');
+            if (lyricsMini) {
+                lyricsMini.classList.add('active');
+            }
+            updateMiniLyric();
+            setTimeout(updateMiniLyric, 200);
+        }
         
         // 设置播放列表（供外部调用，如从歌单页面）
         function setPlaylist(songs, startIndex = 0) {
@@ -2134,7 +2114,9 @@
             // 更新随机播放列表
             updateShuffledPlaylist();
             
-            // 移除日志输出，减少控制台信息
+            if (queuePanelOpen) {
+                renderQueuePanel();
+            }
         }
         
         // 将setPlaylist暴露为全局函数
@@ -2164,7 +2146,7 @@
             const collapsedSongTitle = document.getElementById('collapsedSongTitle');
             const collapsedSongArtist = document.getElementById('collapsedSongArtist');
             
-            if (!player || !playerDiv || !songInfo) {
+            if (!player || !playerDiv) {
                 console.error('播放器元素未找到');
                 showError('播放器初始化失败，请刷新页面重试');
                 return;
@@ -2173,15 +2155,11 @@
             // 先停止当前播放
             player.pause();
             
-            // 重置进度条
-            const progressBar = document.getElementById('playerProgress');
-            if (progressBar) {
-                progressBar.value = 0;
-            }
-            
             // 设置新的歌曲
             player.src = songUrl;
-            songInfo.textContent = `${songTitle} - ${artist}`;
+            if (songInfo) {
+                songInfo.textContent = `${songTitle} - ${artist}`;
+            }
             // 更新系统级媒体信息（供系统快捷键/媒体控制中心展示）
             updateMediaSessionMetadata(songTitle, artist);
             
@@ -2194,30 +2172,21 @@
             }
             
             playerDiv.classList.add('active');
-            // 默认以收起状态打开播放器
-            playerDiv.classList.add('collapsed');
-            
-            // 确保收起时显示迷你歌词
-            const lyricsMini = document.getElementById('lyricsMini');
-            if (lyricsMini) {
-                lyricsMini.classList.add('active');
-            }
-            // 隐藏展开的歌词容器
-            const lyricsContainer = document.getElementById('lyricsContainer');
-            if (lyricsContainer) {
-                lyricsContainer.style.display = 'none';
-            }
+            showMiniLyrics();
             
             currentSongId = songId;
             
-            // 更新当前播放索引
-            const currentList = getCurrentPlaylist();
-            currentIndex = currentList.findIndex(song => song.id === songId);
+            // 更新当前播放索引（始终按 playlist 原始顺序，便于队列列表切歌）
+            currentIndex = playlist.findIndex(song => song.id === songId);
             if (currentIndex === -1 && playlist.length > 0) {
                 // 如果不在播放列表中，添加到列表末尾
                 playlist.push({ url: songUrl, title: songTitle, artist: artist, id: songId });
                 currentIndex = playlist.length - 1;
                 updateShuffledPlaylist();
+            }
+            
+            if (queuePanelOpen) {
+                renderQueuePanel();
             }
             
             // 设置错误监听器（在加载前设置）
@@ -2291,20 +2260,7 @@
                             currentLyrics = parseLyrics(lyricsData.lyrics);
                             console.log('解析后的歌词行数:', currentLyrics.length);
                             renderLyrics(currentLyrics);
-                            
-                            // 根据展开状态显示歌词
-                            if (lyricsExpanded) {
-                                document.getElementById('lyricsContainer').style.display = 'block';
-                                document.getElementById('lyricsMini').classList.remove('active');
-                            } else {
-                                // 折叠模式：显示迷你歌词区域
-                                document.getElementById('lyricsMini').classList.add('active');
-                                // 立即更新迷你歌词，然后延迟再次更新以确保正确显示
-                                updateMiniLyric();
-                                setTimeout(() => {
-                                    updateMiniLyric();
-                                }, 200);
-                            }
+                            showMiniLyrics();
                             return; // 成功读取，直接返回
                         }
                     }
@@ -2325,53 +2281,21 @@
                         currentLyrics = parseLyrics(data.lyrics);
                         console.log('解析后的歌词行数:', currentLyrics.length);
                         renderLyrics(currentLyrics);
-                        
-                        // 根据展开状态显示歌词
-                        if (lyricsExpanded) {
-                            document.getElementById('lyricsContainer').style.display = 'block';
-                            document.getElementById('lyricsMini').classList.remove('active');
-                        } else {
-                            // 折叠模式：显示迷你歌词区域
-                            document.getElementById('lyricsMini').classList.add('active');
-                            // 立即更新迷你歌词，然后延迟再次更新以确保正确显示
-                            updateMiniLyric();
-                            setTimeout(() => {
-                                updateMiniLyric();
-                            }, 200);
-                        }
+                        showMiniLyrics();
                     } else {
-                        // 移除日志输出，减少控制台信息
                         currentLyrics = [];
                         renderLyrics([]);
-                        // 即使没有歌词，也显示折叠区域（显示"暂无歌词"）
-                        if (!lyricsExpanded) {
-                            document.getElementById('lyricsMini').classList.add('active');
-                            updateMiniLyric();
-                            setTimeout(() => {
-                                updateMiniLyric();
-                            }, 200);
-                        }
+                        showMiniLyrics();
                     }
                 } catch (error) {
                     console.error('获取歌词失败:', error);
                     console.error('错误详情:', error.message);
                     currentLyrics = [];
                     renderLyrics([]);
-                    // 即使获取失败，也显示折叠区域
-                    if (!lyricsExpanded) {
-                        document.getElementById('lyricsMini').classList.add('active');
-                        updateMiniLyric();
-                        setTimeout(() => {
-                            updateMiniLyric();
-                        }, 200);
-                    }
+                    showMiniLyrics();
                 }
             } else {
-                // 如果没有歌曲ID，也确保显示歌词区域
-                if (!lyricsExpanded) {
-                    document.getElementById('lyricsMini').classList.add('active');
-                }
-                // 移除日志输出，减少控制台信息
+                showMiniLyrics();
             }
             
             player.play();
@@ -2380,7 +2304,6 @@
         // 切换播放/暂停
         function togglePlayPause() {
             const player = document.getElementById('audioPlayer');
-            const btn = document.getElementById('playPauseBtn');
             
             if (!player) {
                 console.error('播放器元素未找到');
@@ -2431,38 +2354,18 @@
                         }
                     }
                 });
-                if (btn) {
-                    btn.innerHTML = '<i class="bi bi-pause-fill"></i>';
-                }
+                updatePlayPauseButtons(true);
             } else {
                 player.pause();
-                if (btn) {
-                    btn.innerHTML = '<i class="bi bi-play-fill"></i>';
-                }
+                updatePlayPauseButtons(false);
             }
         }
         
-        // 更新播放时间显示
+        // 更新歌词高亮（随播放进度）
         function updateTimeDisplay() {
             const player = document.getElementById('audioPlayer');
-            const timeDisplay = document.getElementById('currentTime');
-            const progressBar = document.getElementById('playerProgress');
-            
-            if (player.duration) {
-                const current = formatTime(player.currentTime);
-                const total = formatTime(player.duration);
-                timeDisplay.textContent = `${current} / ${total}`;
-                
-                // 更新进度条（只有在用户没有拖动时才更新）
-                if (progressBar && !progressBar.dataset.isDragging) {
-                    const progress = (player.currentTime / player.duration) * 100;
-                    progressBar.value = progress;
-                }
-                
-                // 更新歌词高亮
-                if (currentLyrics.length > 0) {
-                    updateActiveLyric(player.currentTime);
-                }
+            if (player.duration && currentLyrics.length > 0) {
+                updateActiveLyric(player.currentTime);
             }
         }
         
@@ -2474,29 +2377,79 @@
             return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
         
-        // 切换播放器收起/展开状态
-        function togglePlayerCollapse() {
+        // 切换播放队列面板
+        function toggleQueuePanel(forceOpen) {
+            const panel = document.getElementById('queuePanel');
+            const btn = document.getElementById('queueListBtn');
             const playerDiv = document.getElementById('musicPlayer');
-            const lyricsMini = document.getElementById('lyricsMini');
-            const lyricsContainer = document.getElementById('lyricsContainer');
+            if (!panel || !playerDiv) return;
             
-            if (playerDiv.classList.contains('collapsed')) {
-                // 展开播放器
-                playerDiv.classList.remove('collapsed');
+            if (forceOpen === true) {
+                queuePanelOpen = true;
+            } else if (forceOpen === false) {
+                queuePanelOpen = false;
             } else {
-                // 收起播放器 - 确保显示迷你版歌词
-                playerDiv.classList.add('collapsed');
-                
-                // 隐藏展开的歌词容器
-                if (lyricsContainer) {
-                    lyricsContainer.style.display = 'none';
-                }
-                
-                // 激活迷你版歌词
-                if (lyricsMini) {
-                    lyricsMini.classList.add('active');
-                }
+                queuePanelOpen = !queuePanelOpen;
             }
+            
+            panel.classList.toggle('show', queuePanelOpen);
+            if (btn) {
+                btn.classList.toggle('active', queuePanelOpen);
+            }
+            
+            if (queuePanelOpen) {
+                renderQueuePanel();
+            }
+        }
+        
+        function renderQueuePanel() {
+            const listEl = document.getElementById('queuePanelList');
+            const countEl = document.getElementById('queuePanelCount');
+            if (!listEl) return;
+            
+            if (countEl) {
+                countEl.textContent = playlist.length > 0 ? `（${playlist.length} 首）` : '';
+            }
+            
+            if (playlist.length === 0) {
+                listEl.innerHTML = '<div class="queue-panel-empty">暂无歌曲，请从页面选择播放</div>';
+                return;
+            }
+            
+            listEl.innerHTML = playlist.map((song, index) => {
+                const isActive = song.id === currentSongId;
+                const title = escapeHtml(song.title || '未知歌曲');
+                const artist = escapeHtml(song.artist || '未知艺术家');
+                return `
+                    <button type="button" class="queue-panel-item${isActive ? ' active' : ''}" data-queue-index="${index}" onclick="event.stopPropagation(); playFromQueue(${index});">
+                        <span class="queue-panel-item-num">${index + 1}</span>
+                        <span class="queue-panel-item-info">
+                            <div class="queue-panel-item-title">${title}</div>
+                            <div class="queue-panel-item-artist">${artist}</div>
+                        </span>
+                        ${isActive ? '<span class="queue-panel-item-playing"><i class="bi bi-soundwave"></i></span>' : ''}
+                    </button>
+                `;
+            }).join('');
+            
+            const activeItem = listEl.querySelector('.queue-panel-item.active');
+            if (activeItem) {
+                activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function playFromQueue(index) {
+            if (index < 0 || index >= playlist.length) return;
+            const song = playlist[index];
+            if (!song) return;
+            currentIndex = index;
+            playSong(song.url, song.title, song.artist, song.id);
         }
         
         function closePlayer() {
@@ -2505,13 +2458,11 @@
             player.pause();
             player.src = '';
             playerDiv.classList.remove('active');
-            playerDiv.classList.remove('collapsed');
             currentLyrics = [];
             currentSongId = null;
             lyricsVisible = false;
-            lyricsExpanded = false;
-            document.getElementById('lyricsContainer').style.display = 'none';
             document.getElementById('lyricsMini').classList.remove('active');
+            toggleQueuePanel(false);
             // 清除保存的状态
             localStorage.removeItem('playerState');
         }
@@ -2559,7 +2510,6 @@
                 })),
                 currentIndex: currentIndex,
                 playMode: playMode,
-                lyricsExpanded: lyricsExpanded,
                 timestamp: Date.now() // 保存时间戳，用于判断状态是否过期
             };
             
@@ -2620,11 +2570,6 @@
                             console.log('恢复播放模式UI失败，但模式已设置:', state.playMode);
                         }
                     }
-                }
-                
-                // 恢复歌词展开状态
-                if (state.lyricsExpanded !== undefined) {
-                    lyricsExpanded = state.lyricsExpanded;
                 }
                 
                 // 如果保存了歌曲ID，尝试恢复播放
@@ -2693,15 +2638,7 @@
                         console.log('播放时间已恢复到:', formatTime(state.currentTime));
                     }
                     
-                    // 4. 恢复歌词展开状态（在播放前设置）
-                    if (lyricsExpanded) {
-                        document.getElementById('lyricsContainer').style.display = 'block';
-                        document.getElementById('lyricsMini').classList.remove('active');
-                    } else {
-                        document.getElementById('lyricsMini').classList.add('active');
-                    }
-                    
-                    // 5. 播放歌曲（这会加载歌词和更新UI）
+                    // 4. 播放歌曲（这会加载歌词和更新UI）
                     try {
                         await playSong(savedSong.url, savedSong.title, savedSong.artist, savedSong.id);
                     } catch (error) {
@@ -2710,29 +2647,16 @@
                         return false;
                     }
                     
-                    // 6. 使用 requestAnimationFrame 确保动画流畅
-                    // 延迟显示播放器，避免闪烁
+                    // 5. 使用 requestAnimationFrame 确保动画流畅
                     requestAnimationFrame(() => {
                         requestAnimationFrame(() => {
-                            // 添加 active 类，触发 CSS 过渡动画
                             playerDiv.classList.add('active');
-                            // 默认以收起状态打开播放器
-                            playerDiv.classList.add('collapsed');
-                            // 确保收起时显示迷你歌词
-                            const lyricsMini = document.getElementById('lyricsMini');
-                            if (lyricsMini) {
-                                lyricsMini.classList.add('active');
-                            }
-                            // 隐藏展开的歌词容器
-                            const lyricsContainer = document.getElementById('lyricsContainer');
-                            if (lyricsContainer) {
-                                lyricsContainer.style.display = 'none';
-                            }
+                            showMiniLyrics();
                             console.log('播放器已显示（带动画）');
                         });
                     });
                     
-                    // 7. 恢复播放状态
+                    // 6. 恢复播放状态
                     if (state.isPlaying) {
                         // 延迟播放，确保动画已开始
                         setTimeout(() => {
@@ -2806,36 +2730,8 @@
                 }
             });
             
-            // 进度条拖动事件
-            const progressBar = document.getElementById('playerProgress');
-            if (progressBar) {
-                // 拖动开始
-                progressBar.addEventListener('mousedown', function() {
-                    progressBar.dataset.isDragging = 'true';
-                });
-                
-                // 拖动中
-                progressBar.addEventListener('input', function() {
-                    if (player.duration) {
-                        const newTime = (progressBar.value / 100) * player.duration;
-                        player.currentTime = newTime;
-                    }
-                });
-                
-                // 拖动结束
-                progressBar.addEventListener('mouseup', function() {
-                    delete progressBar.dataset.isDragging;
-                });
-                
-                // 触摸事件支持（移动端）
-                progressBar.addEventListener('touchstart', function() {
-                    progressBar.dataset.isDragging = 'true';
-                });
-                
-                progressBar.addEventListener('touchend', function() {
-                    delete progressBar.dataset.isDragging;
-                });
-            }
+            // 初始化播放模式图标状态
+            setPlayMode(playMode);
             
             // 播放状态变化（保存状态）
             player.addEventListener('play', function() {
@@ -2898,78 +2794,6 @@
                 }
             });
             
-            // 点击歌词行跳转到对应时间
-            document.addEventListener('click', function(e) {
-                if (e.target.classList.contains('lyrics-line')) {
-                    const time = parseFloat(e.target.dataset.time);
-                    if (time >= 0) {
-                        player.currentTime = time;
-                        if (player.paused) {
-                            player.play();
-                        }
-                    }
-                }
-            });
-            
-            // 监听歌词容器的滚动事件（用户手动滚动时接管7秒）
-            const lyricsContainer = document.getElementById('lyricsContainer');
-            if (lyricsContainer) {
-                let scrollTimer = null;
-                let isUserScrolling = false;
-                let lastScrollTop = 0;
-                
-                // 检测用户手动滚动
-                lyricsContainer.addEventListener('wheel', function(e) {
-                    // 用户使用鼠标滚轮滚动
-                    isUserScrolling = true;
-                    pauseAutoScroll(7000);
-                    
-                    // 清除之前的定时器
-                    if (scrollTimer) {
-                        clearTimeout(scrollTimer);
-                    }
-                    
-                    // 检测滚动停止
-                    scrollTimer = setTimeout(() => {
-                        isUserScrolling = false;
-                    }, 150);
-                });
-                
-                // 触摸设备支持
-                lyricsContainer.addEventListener('touchstart', function() {
-                    pauseAutoScroll(7000);
-                });
-                
-                lyricsContainer.addEventListener('touchmove', function() {
-                    pauseAutoScroll(7000);
-                });
-                
-                // 监听滚动条拖拽
-                lyricsContainer.addEventListener('mousedown', function(e) {
-                    // 如果点击在滚动条区域
-                    const rect = lyricsContainer.getBoundingClientRect();
-                    const scrollbarWidth = 6; // 滚动条宽度
-                    if (e.clientX >= rect.right - scrollbarWidth) {
-                        pauseAutoScroll(7000);
-                    }
-                });
-                
-                // 监听滚动事件（检测用户手动滚动）
-                lyricsContainer.addEventListener('scroll', function() {
-                    const currentScrollTop = lyricsContainer.scrollTop;
-                    
-                    // 如果滚动位置发生变化且不是程序触发的，暂停自动滚动
-                    if (!isProgramScrolling && Math.abs(currentScrollTop - lastScrollTop) > 5) {
-                        // 检查是否是用户操作（通过检测滚动速度）
-                        const scrollDelta = Math.abs(currentScrollTop - lastScrollTop);
-                        if (scrollDelta > 10) {
-                            pauseAutoScroll(7000);
-                        }
-                    }
-                    
-                    lastScrollTop = currentScrollTop;
-                });
-            }
         });
         
         // 扫描功能
