@@ -1033,13 +1033,13 @@ function addSongToPlaylist(playlistId, songId) {
         return jsonData;
     })
     .then(data => {
-        // 关闭模态框
         const modal = bootstrap.Modal.getInstance(document.getElementById('selectPlaylistModal'));
         if (modal) {
             modal.hide();
         }
-        // 显示成功消息（可选，静默处理）
-        // alert('已添加到歌单');
+        if (typeof showSuccess === 'function') {
+            showSuccess('已添加到歌单');
+        }
     })
     .catch(error => {
         console.error('Error:', error);
@@ -1098,13 +1098,12 @@ function autoScrollToSection() {
     
     // 如果找到了目标区域，滚动到该位置
     if (targetSection) {
-        // 等待页面内容加载完成后再滚动
         setTimeout(() => {
             targetSection.scrollIntoView({ 
-                behavior: 'smooth', 
+                behavior: 'auto', 
                 block: 'start' 
             });
-        }, 100);
+        }, 50);
     }
 }
 

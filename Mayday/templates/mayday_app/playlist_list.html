@@ -206,13 +206,11 @@ function savePlaylist() {
         return jsonData;
     })
     .then(data => {
-        // 静默处理，不显示成功消息
-        // 关闭模态框
         const modal = bootstrap.Modal.getInstance(document.getElementById('playlistModal'));
         if (modal) {
             modal.hide();
         }
-        location.reload();
+        reloadPagePreservingPlayer();
     })
     .catch(error => {
         console.error('Error:', error);
@@ -249,7 +247,7 @@ function deletePlaylist(id, name) {
         const jsonData = await response.json();
         
         if (response.ok) {
-            location.reload();
+            reloadPagePreservingPlayer();
         } else {
             alert(jsonData.error || '删除失败');
         }
@@ -404,9 +402,13 @@ function addSongToPlaylist(songId, songTitle) {
         return jsonData;
     })
     .then(data => {
-        // 静默处理，不显示成功消息
-        // 刷新页面
-        location.reload();
+        if (typeof showSuccess === 'function') {
+            showSuccess(`已添加「${songTitle}」到歌单`);
+        }
+        if (typeof isPlayerActive === 'function' && isPlayerActive()) {
+            return;
+        }
+        reloadPagePreservingPlayer();
     })
     .catch(error => {
         console.error('Error:', error);

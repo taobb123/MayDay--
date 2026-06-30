@@ -28,6 +28,13 @@
 .btn-flat.btn-danger:hover {
     background-color: #c82333;
 }
+.btn-flat.btn-secondary {
+    background-color: #9ca3af;
+    color: white;
+}
+.btn-flat.btn-secondary:hover {
+    background-color: #6b7280;
+}
 </style>
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4 position-relative">
@@ -86,6 +93,10 @@
                                 <i class="bi bi-play-fill"></i> 播放
                             </button>
                             {% endif %}
+                            <button class="btn btn-sm btn-flat btn-secondary" type="button"
+                                    onclick="showPlaylistModal({{ playlist_song.song.id }})">
+                                <i class="bi bi-list-ul"></i> 歌单
+                            </button>
                             <button class="btn btn-sm btn-flat btn-danger" 
                                     onclick="removeFromPlaylist({{ playlist.id }}, {{ playlist_song.song.id }}, '{{ playlist_song.song.title }}')">
                                 <i class="bi bi-trash"></i> 移除
@@ -103,6 +114,30 @@
         <p class="text-muted mt-3">这个歌单还没有歌曲</p>
     </div>
     {% endif %}
+</div>
+
+<!-- 选择目标歌单模态框 -->
+<div class="modal fade" id="selectPlaylistModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">添加到歌单</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="playlistList" style="max-height: 400px; overflow-y: auto;">
+                    <p class="text-muted text-center">加载中...</p>
+                </div>
+                <input type="hidden" id="currentSongIdForPlaylist">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <a href="{% url 'playlist_list' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> 创建新歌单
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- 编辑歌单模态框 -->
@@ -132,6 +167,163 @@
 
 
 <script>
+const CURRENT_PLAYLIST_ID = {{ playlist.id }};
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showPlaylistModal(songId) {
+    if (!songId) {
+        alert('歌曲ID未找到');
+        return;
+    }
+    
+    const currentSongIdInput = document.getElementById('currentSongIdForPlaylist');
+    const playlistList = document.getElementById('playlistList');
+    if (!currentSongIdInput || !playlistList) {
+        alert('页面元素未找到，请刷新页面重试');
+        return;
+    }
+    
+    currentSongIdInput.value = songId;
+    playlistList.innerHTML = '<p class="text-muted text-center">加载中...</p>';
+    
+    fetch('/api/playlists/list/', {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin'
+    })
+    .then(async response => {
+        const text = await response.text();
+        const contentType = response.headers.get('content-type') || '';
+        if (!response.ok) {
+            if (contentType.includes('application/json')) {
+                const errorData = JSON.parse(text);
+                throw new Error(errorData.error || errorData.detail || `HTTP ${response.status}`);
+            }
+            throw new Error(`HTTP ${response.status}`);
+        }
+        if (!contentType.includes('application/json')) {
+            throw new Error('服务器返回了非JSON响应');
+        }
+        return JSON.parse(text);
+    })
+    .then(data => {
+        let playlists = Array.isArray(data) ? data : [];
+        playlists = playlists.filter(p => p.id !== CURRENT_PLAYLIST_ID);
+        
+        if (playlists.length === 0) {
+            playlistList.innerHTML = `
+                <p class="text-muted text-center">没有其他歌单可添加，请先创建新歌单</p>
+                <div class="text-center mt-2">
+                    <a href="{% url 'playlist_list' %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus-circle"></i> 创建歌单
+                    </a>
+                </div>
+            `;
+        } else {
+            let html = '<div class="list-group">';
+            playlists.forEach(playlist => {
+                html += `
+                    <button type="button" class="list-group-item list-group-item-action"
+                            onclick="addSongToPlaylist(${playlist.id}, ${songId})">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">${escapeHtml(playlist.name)}</h6>
+                                <small class="text-muted">${playlist.song_count || 0} 首歌曲</small>
+                            </div>
+                            <i class="bi bi-plus-circle text-primary"></i>
+                        </div>
+                    </button>
+                `;
+            });
+            html += '</div>';
+            playlistList.innerHTML = html;
+        }
+        
+        const modalElement = document.getElementById('selectPlaylistModal');
+        if (modalElement) {
+            new bootstrap.Modal(modalElement).show();
+        }
+    })
+    .catch(error => {
+        console.error('加载歌单列表失败:', error);
+        playlistList.innerHTML = `
+            <p class="text-danger text-center">${escapeHtml(error.message || '加载失败')}</p>
+            <div class="text-center mt-2">
+                <button type="button" class="btn btn-sm btn-primary" onclick="showPlaylistModal(${songId})">
+                    <i class="bi bi-arrow-clockwise"></i> 重试
+                </button>
+            </div>
+        `;
+        const modalElement = document.getElementById('selectPlaylistModal');
+        if (modalElement) {
+            new bootstrap.Modal(modalElement).show();
+        }
+    });
+}
+
+function addSongToPlaylist(playlistId, songId) {
+    if (!songId) {
+        songId = document.getElementById('currentSongIdForPlaylist')?.value;
+    }
+    
+    playlistId = parseInt(playlistId, 10);
+    songId = parseInt(songId, 10);
+    
+    if (!playlistId || !songId || isNaN(playlistId) || isNaN(songId)) {
+        alert('参数错误：歌单ID或歌曲ID无效');
+        return;
+    }
+    
+    const csrfToken = getCookie('csrftoken');
+    if (!csrfToken) {
+        alert('CSRF token未找到，请刷新页面后重试');
+        return;
+    }
+    
+    fetch(`/api/playlists/${playlistId}/add_song/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ song_id: songId })
+    })
+    .then(async response => {
+        const text = await response.text();
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            throw new Error('服务器返回了非JSON响应');
+        }
+        const jsonData = JSON.parse(text);
+        if (!response.ok) {
+            throw new Error(jsonData.error || jsonData.message || '添加失败');
+        }
+        return jsonData;
+    })
+    .then(() => {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('selectPlaylistModal'));
+        if (modal) modal.hide();
+        if (typeof showSuccess === 'function') {
+            showSuccess('已添加到歌单', 3000, true);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.message || '添加失败');
+    });
+}
+
 function editPlaylist(id, name) {
     document.getElementById('playlistName').value = name;
     document.getElementById('playlistId').value = id;
@@ -161,7 +353,7 @@ function savePlaylist() {
         if (data.error) {
             alert(data.error);
         } else {
-            location.reload();
+            reloadPagePreservingPlayer();
         }
     })
     .catch(error => {
@@ -187,8 +379,33 @@ function removeFromPlaylist(playlistId, songId, songTitle) {
     .then(data => {
         if (data.error) {
             alert(data.error);
+        } else if (typeof isPlayerActive === 'function' && isPlayerActive()) {
+            const row = document.querySelector(`tr[data-song-id="${songId}"]`);
+            if (row) {
+                row.remove();
+            }
+            const tbody = document.querySelector('table tbody');
+            if (tbody && tbody.querySelectorAll('tr').length === 0) {
+                reloadPagePreservingPlayer();
+                return;
+            }
+            tbody?.querySelectorAll('tr').forEach((tr, index) => {
+                const numCell = tr.querySelector('td:first-child');
+                if (numCell) numCell.textContent = index + 1;
+            });
+            const countMatch = document.querySelector('.text-muted.mb-0')?.textContent?.match(/(\d+)\s*首歌曲/);
+            if (countMatch) {
+                const newCount = Math.max(0, parseInt(countMatch[1], 10) - 1);
+                const countEl = document.querySelector('.text-muted.mb-0');
+                if (countEl) {
+                    countEl.innerHTML = countEl.innerHTML.replace(/\d+\s*首歌曲/, `${newCount} 首歌曲`);
+                }
+            }
+            if (typeof showSuccess === 'function') {
+                showSuccess(`已从歌单移除「${songTitle}」`);
+            }
         } else {
-            location.reload();
+            reloadPagePreservingPlayer();
         }
     })
     .catch(error => {

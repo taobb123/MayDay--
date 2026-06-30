@@ -109,15 +109,13 @@
                                     <i class="bi bi-play-fill"></i> 播放
                                 </button>
                                 {% else %}
-                                <span class="text-muted">无文件</span>
+                                <span class="text-muted me-2">无文件</span>
                                 {% endif %}
-                                {% if song.file_path or song.original_path %}
-                                <button class="btn btn-sm btn-outline-secondary add-to-playlist-btn"
+                                <button class="btn btn-sm btn-secondary add-to-playlist-btn"
                                         data-song-id="{{ song.id }}"
                                         type="button">
                                     <i class="bi bi-list-ul"></i> 歌单
                                 </button>
-                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -144,7 +142,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">选择歌单</h5>
+                    <h5 class="modal-title">添加到歌单</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -195,23 +193,31 @@ function handlePlayAlbumSong(playUrl, title, artist, songId) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.play-song-btn').forEach(btn => {
+function initRandomPlaylistPage() {
+    const page = document.getElementById('random-playlist-page');
+    if (!page) return;
+
+    page.querySelectorAll('.play-song-btn:not([data-bound])').forEach(btn => {
+        btn.setAttribute('data-bound', '1');
         btn.addEventListener('click', function() {
             handlePlayAlbumSong(
                 this.getAttribute('data-play-url'),
                 this.getAttribute('data-song-title'),
                 this.getAttribute('data-song-artist'),
-                parseInt(this.getAttribute('data-song-id'))
+                parseInt(this.getAttribute('data-song-id'), 10)
             );
         });
     });
-    document.querySelectorAll('.add-to-playlist-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            showPlaylistModal(parseInt(this.getAttribute('data-song-id')));
+    page.querySelectorAll('.add-to-playlist-btn:not([data-bound])').forEach(btn => {
+        btn.setAttribute('data-bound', '1');
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            showPlaylistModal(parseInt(this.getAttribute('data-song-id'), 10));
         });
     });
-});
+}
+
+initRandomPlaylistPage();
 
 function showPlaylistModal(songId) {
     if (!songId) {
@@ -311,7 +317,9 @@ function addSongToPlaylist(playlistId, songId) {
         .then(() => {
             const modal = bootstrap.Modal.getInstance(document.getElementById('selectPlaylistModal'));
             if (modal) modal.hide();
-            alert('已添加到歌单');
+            if (typeof showSuccess === 'function') {
+                showSuccess('已添加到歌单', 3000, true);
+            }
         })
         .catch(e => alert(e.message || '添加失败'));
 }
