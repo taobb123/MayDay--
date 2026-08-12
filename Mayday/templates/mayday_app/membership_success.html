@@ -1,0 +1,35 @@
+{% extends 'mayday_app/base.html' %}
+
+{% block title %}开通结果 - Mayday{% endblock %}
+{% block page_heading %}开通结果{% endblock %}
+
+{% block content %}
+<div class="membership-panel" style="max-width:640px;">
+    {% if membership.is_member %}
+    <h3 class="mb-2">会员已生效</h3>
+    <p class="text-muted">当前套餐：{{ membership.plan_label }}
+        {% if membership.expires_at %} · 到期 {{ membership.expires_at }}{% endif %}
+    </p>
+    {% else %}
+    <h3 class="mb-2">尚未检测到会员</h3>
+    <p class="text-muted">若刚完成 Stripe 支付，请稍候 Webhook 履约，或返回会员页刷新。</p>
+    {% endif %}
+
+    {% if order %}
+    <div class="mt-3 p-3" style="background:var(--bg-surface);border:1px solid var(--bg-divider);border-radius:12px;">
+        <div>订单 #{{ order.id }}</div>
+        <div>渠道：{{ order.provider }} · 状态：{{ order.status }}</div>
+        <div>金额：{{ order.amount_cents }} 分 · {{ order.days }} 天</div>
+    </div>
+    {% endif %}
+
+    <div class="mt-4 d-flex gap-2">
+        <a class="btn btn-primary btn-sm btn-icon" href="{% url 'membership' %}" title="返回会员" aria-label="返回会员">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <a class="btn btn-outline-secondary btn-sm btn-icon" href="{% url 'playlist_list' %}" title="我的歌单" aria-label="我的歌单">
+            <i class="bi bi-music-note-list"></i>
+        </a>
+    </div>
+</div>
+{% endblock %}

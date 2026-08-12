@@ -1,6 +1,6 @@
 """
 抽象接口定义 - 遵循接口编程而非实现编程
-五月天时间隧道抽象类
+领域实体接口（时间线/时间隧道产品功能已废弃，见协作纪要 001）
 """
 from __future__ import annotations
 from abc import ABC, abstractmethod
@@ -12,11 +12,11 @@ if TYPE_CHECKING:
 
 
 class TimeTunnelItem(ABC):
-    """时间隧道项目抽象基类 - 所有时间线项目的基础接口"""
+    """带日期语义的内容项接口（历史命名；产品层已不再提供时间线聚合）"""
     
     @abstractmethod
     def get_date(self) -> datetime:
-        """获取时间线日期"""
+        """获取关联日期"""
         pass
     
     @abstractmethod
@@ -181,28 +181,3 @@ class MusicPlayerInterface(ABC):
     def get_duration(self) -> float:
         """获取总时长"""
         pass
-
-
-class TimelineRepositoryInterface(ABC):
-    """时间线仓库接口"""
-    
-    @abstractmethod
-    def add_item(self, item: Any) -> None:
-        """添加时间线项目"""
-        pass
-    
-    @abstractmethod
-    def get_items_by_date_range(self, start_date: datetime, end_date: datetime) -> List[Any]:
-        """根据日期范围获取项目"""
-        pass
-    
-    @abstractmethod
-    def get_all_items(self) -> List[Any]:
-        """获取所有项目"""
-        pass
-    
-    @abstractmethod
-    def get_items_by_type(self, item_type: str) -> List[Any]:
-        """根据类型获取项目"""
-        pass
-

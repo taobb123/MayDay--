@@ -7,10 +7,10 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="bi bi-music-note-list"></i> 我的歌单</h2>
         <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-primary" onclick="showCreatePlaylistModal()">
-                <i class="bi bi-plus-circle"></i> 创建歌单
+            <button type="button" class="btn btn-primary btn-icon" onclick="showCreatePlaylistModal()" title="创建歌单" aria-label="创建歌单">
+                <i class="bi bi-plus-circle"></i>
             </button>
-            <button class="btn btn-outline-secondary" onclick="location.href='{% url 'index' %}'" title="关闭">
+            <button type="button" class="btn btn-outline-secondary btn-icon" onclick="location.href='{% url 'index' %}'" title="关闭" aria-label="关闭">
                 <i class="bi bi-x-lg"></i>
             </button>
         </div>
@@ -19,32 +19,30 @@
     {% if playlists %}
     <div class="row">
         {% for playlist in playlists %}
-        <div class="col-md-4 mb-4">
-            <div class="card h-100 shadow-sm">
+        <div class="col-md-6 col-xl-4 mb-4">
+            <div class="card playlist-card">
                 <div class="card-body">
                     <h5 class="card-title">
-                        <a href="{% url 'playlist_detail' playlist.id %}" class="text-decoration-none">
+                        <a href="{% url 'playlist_detail' playlist.id %}" class="text-decoration-none text-reset">
                             {{ playlist.name }}
                         </a>
                     </h5>
-                    <p class="text-muted mb-2">
-                        <i class="bi bi-music-note-beamed"></i> {{ playlist.songs.count }} 首歌曲
-                    </p>
-                    <p class="text-muted small mb-3">
-                        <i class="bi bi-calendar"></i> {{ playlist.created_at|date:"Y年m月d日" }}
-                    </p>
-                    <div class="btn-group" role="group">
-                        <a href="{% url 'playlist_detail' playlist.id %}" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-eye"></i> 查看
+                    <div class="playlist-card-meta">
+                        <span><i class="bi bi-music-note-beamed"></i> {{ playlist.songs.count }} 首歌曲</span>
+                        <span><i class="bi bi-calendar"></i> {{ playlist.created_at|date:"Y年m月d日" }}</span>
+                    </div>
+                    <div class="playlist-card-actions">
+                        <a href="{% url 'playlist_detail' playlist.id %}" class="btn btn-sm btn-outline-primary btn-icon" title="查看" aria-label="查看">
+                            <i class="bi bi-eye"></i>
                         </a>
-                        <button class="btn btn-sm btn-success" onclick="showAddSongModal({{ playlist.id }}, '{{ playlist.name }}')">
-                            <i class="bi bi-plus-circle"></i> 添加歌曲
+                        <button type="button" class="btn btn-sm btn-success btn-icon" onclick="showAddSongModal({{ playlist.id }}, '{{ playlist.name|escapejs }}')" title="添加歌曲" aria-label="添加歌曲">
+                            <i class="bi bi-plus-circle"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="editPlaylist({{ playlist.id }}, '{{ playlist.name }}')">
-                            <i class="bi bi-pencil"></i> 编辑
+                        <button type="button" class="btn btn-sm btn-outline-secondary btn-icon" onclick="editPlaylist({{ playlist.id }}, '{{ playlist.name|escapejs }}')" title="编辑" aria-label="编辑">
+                            <i class="bi bi-pencil"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deletePlaylist({{ playlist.id }}, '{{ playlist.name }}')">
-                            <i class="bi bi-trash"></i> 删除
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-icon" onclick="deletePlaylist({{ playlist.id }}, '{{ playlist.name|escapejs }}')" title="删除" aria-label="删除">
+                            <i class="bi bi-trash"></i>
                         </button>
                     </div>
                 </div>
@@ -56,8 +54,8 @@
     <div class="text-center py-5">
         <i class="bi bi-music-note-list" style="font-size: 4rem; color: #ccc;"></i>
         <p class="text-muted mt-3">还没有创建任何歌单</p>
-        <button class="btn btn-primary" onclick="showCreatePlaylistModal()">
-            <i class="bi bi-plus-circle"></i> 创建第一个歌单
+        <button type="button" class="btn btn-primary btn-icon" onclick="showCreatePlaylistModal()" title="创建歌单" aria-label="创建歌单">
+            <i class="bi bi-plus-circle"></i>
         </button>
     </div>
     {% endif %}
@@ -83,7 +81,9 @@
                 <input type="hidden" id="currentPlaylistId">
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-secondary btn-icon" data-bs-dismiss="modal" title="关闭" aria-label="关闭">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -108,8 +108,12 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" onclick="savePlaylist()">保存</button>
+                <button type="button" class="btn btn-secondary btn-icon" data-bs-dismiss="modal" title="取消" aria-label="取消">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <button type="button" class="btn btn-primary btn-icon" onclick="savePlaylist()" title="保存" aria-label="保存">
+                    <i class="bi bi-check-lg"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -328,8 +332,8 @@ function performSongSearch(query) {
                     html += `<td>${escapeHtml(song.artist || '-')}</td>`;
                     html += `<td>${escapeHtml(song.album?.name || '-')}</td>`;
                     html += '<td>';
-                    html += `<button class="btn btn-sm btn-primary" onclick="addSongToPlaylist(${song.id}, '${escapeHtml(song.title)}')">`;
-                    html += '<i class="bi bi-plus-circle"></i> 添加';
+                    html += `<button type="button" class="btn btn-sm btn-primary btn-icon" onclick="addSongToPlaylist(${song.id}, '${escapeHtml(song.title)}')" title="添加" aria-label="添加">`;
+                    html += '<i class="bi bi-plus-circle"></i>';
                     html += '</button>';
                     html += '</td>';
                     html += '</tr>';

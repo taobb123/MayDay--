@@ -310,3 +310,123 @@ class PlaylistSong(models.Model):
     
     def __str__(self):
         return f"{self.playlist.name} - {self.song.title}"
+
+
+class MembershipProfile(models.Model):
+    """用户会员资料（骨架：free / member，无真实支付）"""
+    PLAN_FREE = 'free'
+    PLAN_MEMBER = 'member'
+    PLAN_CHOICES = [
+        (PLAN_FREE, '免费'),
+        (PLAN_MEMBER, '会员'),
+    ]
+    FREE_PLAYLIST_LIMIT = 5
+
+    user = models.OneToOneField(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='membership',
+        verbose_name='用户',
+    )
+    plan = models.CharField(
+        max_length=20,
+        choices=PLAN_CHOICES,
+        default=PLAN_FREE,
+        verbose_name='套餐',
+    )
+    expires_at = models.DateTimeField(null=True, blank=True, verbose_name='会员到期时间')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+
+    class Meta:
+        verbose_name = '会员资料'
+        verbose_name_plural = '会员资料'
+
+    def __str__(self):
+        return f"{self.user.username} · {self.plan}"
+
+    @property
+    def is_active_member(self) -> bool:
+        if self.plan != self.PLAN_MEMBER:
+            return False
+        if self.expires_at is None:
+            return True
+        from django.utils import timezone
+        return self.expires_at > timezone.now()
+
+    def effective_plan(self) -> str:
+        return self.PLAN_MEMBER if self.is_active_member else self.PLAN_FREE
+
+    def playlist_limit(self):
+        return None if self.is_active_member else self.FREE_PLAYLIST_LIMIT
+
+
+class Favorite(models.Model):
+    """用户收藏的歌曲"""
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='favorites',
+        verbose_name='用户',
+    )
+    song = models.ForeignKey(
+        Song,
+        on_delete=models.CASCADE,
+        related_name='favorited_by',
+        verbose_name='歌曲',
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='收藏时间')
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = '收藏'
+        verbose_name_plural = '收藏'
+        unique_together = [['user', 'song']]
+
+    def __str__(self):
+        return f"{self.user.username} ♡ {self.song.title}"
+
+
+class MembershipOrder(models.Model):
+    """会员支付订单（骨架：支持 mock / stripe）"""
+    STATUS_PENDING = 'pending'
+    STATUS_PAID = 'paid'
+    STATUS_FAILED = 'failed'
+    STATUS_CANCELED = 'canceled'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, '待支付'),
+        (STATUS_PAID, '已支付'),
+        (STATUS_FAILED, '失败'),
+        (STATUS_CANCELED, '已取消'),
+    ]
+
+    PROVIDER_MOCK = 'mock'
+    PROVIDER_STRIPE = 'stripe'
+    PROVIDER_CHOICES = [
+        (PROVIDER_MOCK, '演示'),
+        (PROVIDER_STRIPE, 'Stripe'),
+    ]
+
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='membership_orders',
+        verbose_name='用户',
+    )
+    provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES, default=PROVIDER_MOCK)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    amount_cents = models.PositiveIntegerField(default=990, verbose_name='金额（分）')
+    currency = models.CharField(max_length=10, default='cny', verbose_name='币种')
+    days = models.PositiveIntegerField(default=30, verbose_name='开通天数')
+    external_id = models.CharField(max_length=200, blank=True, verbose_name='外部单号')
+    fulfilled = models.BooleanField(default=False, verbose_name='已履约开通')
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = '会员订单'
+        verbose_name_plural = '会员订单'
+
+    def __str__(self):
+        return f'#{self.id} {self.user.username} {self.provider}/{self.status}'

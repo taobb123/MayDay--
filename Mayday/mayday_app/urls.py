@@ -22,15 +22,21 @@ urlpatterns = [
     path('api/playlists/<int:playlist_id>/delete/', views.delete_playlist_api, name='delete_playlist_api'),
     path('api/playlists/<int:playlist_id>/add_song/', views.add_song_to_playlist_api, name='add_song_to_playlist_api'),
     path('api/playlists/<int:playlist_id>/songs/<int:song_id>/', views.remove_song_from_playlist_api, name='remove_song_from_playlist_api'),
+    path('api/favorites/list/', views.favorites_list_api, name='favorites_list_api'),
+    path('api/favorites/ids/', views.favorite_ids_api, name='favorite_ids_api'),
+    path('api/favorites/toggle/', views.favorite_toggle_api, name='favorite_toggle_api'),
     
     # API路由（DRF ViewSet，放在后面避免冲突）
     path('api/', include(router.urls)),
     path('api/scan/', views.ScanView.as_view(), name='scan'),
-    path('api/timeline/', views.TimelineView.as_view(), name='timeline'),
     path('api/search/', views.SearchView.as_view(), name='search'),
     path('api/search/artists/', views.ArtistSearchView.as_view(), name='artist_search'),
     path('api/search/artist-songs/', views.ArtistSongsView.as_view(), name='artist_songs'),
     path('api/artists/by-initial/', views.ArtistsByInitialView.as_view(), name='artists_by_initial'),
+    path('api/membership/status/', views.membership_status_api, name='membership_status_api'),
+    path('api/membership/upgrade/', views.membership_upgrade_api, name='membership_upgrade_api'),
+    path('api/payments/checkout/', views.payments_checkout_api, name='payments_checkout_api'),
+    path('api/payments/webhook/stripe/', views.payments_stripe_webhook, name='payments_stripe_webhook'),
     
     # 用户认证路由
     path('login/', views.login_view, name='login'),
@@ -41,6 +47,9 @@ urlpatterns = [
     path('playlists/', views.playlist_list_view, name='playlist_list'),
     path('playlist/<int:playlist_id>/', views.playlist_detail_view, name='playlist_detail'),
     path('random-playlist/', views.random_playlist_view, name='random_playlist'),
+    path('membership/', views.membership_view, name='membership'),
+    path('membership/success/', views.membership_success_view, name='membership_success'),
+    path('favorites/', views.favorites_view, name='favorites'),
     
     # 页面路由
     path('', views.index, name='index'),

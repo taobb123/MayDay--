@@ -4,8 +4,11 @@ Django settings for mayday_project project.
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / '.env')
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-mayday-project-dev-key-change-in-production'
@@ -24,7 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'mayday_app',
+    'mayday_app.apps.MaydayAppConfig',
 ]
 
 MIDDLEWARE = [
@@ -113,6 +116,18 @@ LYRICS_DIRECTORY = r'C:\Lyrics'
 # Kafka settings
 KAFKA_BOOTSTRAP_SERVERS = ['localhost:9092']
 KAFKA_ENABLED = False  # Set to True when Kafka is configured
+
+# Auth
+LOGIN_URL = '/login/'
+
+# Payments (secrets via env / .env only — never commit keys)
+PAYMENT_PROVIDER = os.getenv('PAYMENT_PROVIDER', 'mock')  # mock | stripe
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+STRIPE_PRICE_ID = os.getenv('STRIPE_PRICE_ID', '')
+MEMBERSHIP_PRICE_CENTS = int(os.getenv('MEMBERSHIP_PRICE_CENTS', '990'))
+MEMBERSHIP_CURRENCY = os.getenv('MEMBERSHIP_CURRENCY', 'cny')
+MEMBERSHIP_DAYS = int(os.getenv('MEMBERSHIP_DAYS', '30'))
 
 # REST Framework
 REST_FRAMEWORK = {

@@ -2,12 +2,8 @@
 序列化器 - 用于API
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any
 from rest_framework import serializers
 from .models import Album, Song, Tour, Quote, Image, TourVenue, Playlist, PlaylistSong
-
-if TYPE_CHECKING:
-    from .interfaces import TimeTunnelItem
 
 
 class SongSerializer(serializers.ModelSerializer):
@@ -78,23 +74,6 @@ class ImageSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
         return None
-
-
-class TimelineItemSerializer(serializers.Serializer):
-    """时间线项目序列化器 - 通用序列化器"""
-    type = serializers.CharField()
-    date = serializers.DateTimeField()
-    title = serializers.CharField()
-    content = serializers.DictField()
-    
-    def to_representation(self, instance: Any):
-        """将TimeTunnelItem转换为字典"""
-        return {
-            'type': instance.get_type(),
-            'date': instance.get_date().isoformat(),
-            'title': instance.get_title(),
-            'content': instance.get_content(),
-        }
 
 
 class PlaylistSongSerializer(serializers.ModelSerializer):

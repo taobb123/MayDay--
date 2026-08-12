@@ -126,13 +126,6 @@ class SongPagination(DjangoPaginatorPagination):
     max_page_size = 100
 
 
-class TimelinePagination(DjangoPaginatorPagination):
-    """时间线分页类 - 每页15条，使用 Django Paginator"""
-    page_size = 15
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-
 # ========== 方式2: LimitOffsetPagination (限制偏移分页) ==========
 # 使用 ?limit=10&offset=20 的方式，适合需要精确控制偏移量的场景
 

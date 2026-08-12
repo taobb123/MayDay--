@@ -2,7 +2,7 @@
 Django管理后台配置
 """
 from django.contrib import admin
-from .models import Album, Song, Tour, TourVenue, Quote, Image, Playlist, PlaylistSong
+from .models import Album, Song, Tour, TourVenue, Quote, Image, Playlist, PlaylistSong, MembershipProfile, Favorite, MembershipOrder
 
 
 @admin.register(Album)
@@ -104,4 +104,28 @@ class PlaylistSongAdmin(admin.ModelAdmin):
         """优化查询"""
         qs = super().get_queryset(request)
         return qs.select_related('playlist', 'song')
+
+
+@admin.register(MembershipProfile)
+class MembershipProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'plan', 'expires_at', 'updated_at']
+    list_filter = ['plan']
+    search_fields = ['user__username']
+    raw_id_fields = ['user']
+
+
+@admin.register(Favorite)
+class FavoriteAdmin(admin.ModelAdmin):
+    list_display = ['user', 'song', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['user__username', 'song__title', 'song__artist']
+    raw_id_fields = ['user', 'song']
+
+
+@admin.register(MembershipOrder)
+class MembershipOrderAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'provider', 'status', 'amount_cents', 'days', 'fulfilled', 'created_at', 'paid_at']
+    list_filter = ['provider', 'status', 'fulfilled']
+    search_fields = ['user__username', 'external_id']
+    raw_id_fields = ['user']
 

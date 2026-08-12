@@ -6,3 +6,7 @@ class MaydayAppConfig(AppConfig):
     name = 'mayday_app'
     verbose_name = '五月天音乐收藏系统'
 
+    def ready(self):
+        # 注册 User → MembershipProfile 信号
+        from . import membership  # noqa: F401
+

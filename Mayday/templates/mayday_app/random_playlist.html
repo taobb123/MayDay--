@@ -36,30 +36,22 @@
 
 {% block content %}
 <div class="container-fluid" id="random-playlist-page">
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="bg-gradient rounded shadow d-flex align-items-center justify-content-center"
-                 style="height: 400px; background: linear-gradient(145deg, #FFF3E6 0%, #FFE0C2 100%); color: #C17817; border: 1px solid #F5D4B3;">
-                <i class="bi bi-shuffle" style="font-size: 6rem;"></i>
+    <div class="mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+            <div>
+                <h1 class="mb-2">随机歌单</h1>
+                <p class="text-muted mb-1">
+                    <i class="bi bi-clock-history"></i> 生成于 {{ generated_at|date:"Y年m月d日 H:i" }}
+                </p>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-music-note-beamed"></i> {{ songs|length }} 首歌曲（曲库不足 30 首时有多少显示多少）
+                </p>
             </div>
+            <a href="{% url 'random_playlist' %}" class="btn btn-primary btn-icon" title="重新随机生成" aria-label="刷新">
+                <i class="bi bi-arrow-clockwise"></i>
+            </a>
         </div>
-        <div class="col-md-8 d-flex flex-column">
-            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-                <div>
-                    <h1 class="mb-2">随机歌单</h1>
-                    <p class="text-muted mb-1">
-                        <i class="bi bi-clock-history"></i> 生成于 {{ generated_at|date:"Y年m月d日 H:i" }}
-                    </p>
-                    <p class="text-muted mb-0">
-                        <i class="bi bi-music-note-beamed"></i> {{ songs|length }} 首歌曲（曲库不足 30 首时有多少显示多少）
-                    </p>
-                </div>
-                <a href="{% url 'random_playlist' %}" class="btn btn-primary" title="重新随机生成">
-                    <i class="bi bi-arrow-clockwise"></i> 刷新
-                </a>
-            </div>
-            <p class="text-muted small mt-2 mb-0">每次打开本页或点击「刷新」都会重新随机抽取。</p>
-        </div>
+        <p class="text-muted small mt-2 mb-0">每次打开本页或点击「刷新」都会重新随机抽取。</p>
     </div>
 
     <div class="mt-4">
@@ -88,7 +80,23 @@
                     {% for song in songs %}
                     <tr>
                         <td>{{ forloop.counter }}</td>
-                        <td class="song-table-ellipsis" title="{{ song.title|escape }}">{{ song.title }}</td>
+                        <td class="song-table-ellipsis" title="{{ song.title|escape }}">
+                            {% if song.file_path or song.original_path %}
+                            <button type="button"
+                                    class="song-title-play play-song-btn"
+                                    data-play-url="{% url 'play_song' song.id %}"
+                                    data-song-title="{{ song.title|escapejs }}"
+                                    data-song-artist="{{ song.artist|escapejs }}"
+                                    data-song-id="{{ song.id }}"
+                                    title="播放 / 暂停"
+                                    aria-label="播放 {{ song.title|escape }}">
+                                <i class="bi bi-play-fill song-play-icon" aria-hidden="true"></i>
+                                <span class="song-play-label">{{ song.title }}</span>
+                            </button>
+                            {% else %}
+                            <span class="text-muted">{{ song.title }}（无文件）</span>
+                            {% endif %}
+                        </td>
                         <td class="song-table-ellipsis" title="{{ song.artist|escape }}">{{ song.artist }}</td>
                         <td class="song-table-ellipsis" title="{% if song.album %}{{ song.album.name|escape }}{% else %}-{% endif %}">{{ song.album.name|default:"-" }}</td>
                         <td class="song-duration-cell">
@@ -100,21 +108,10 @@
                         </td>
                         <td class="col-actions-cell">
                             <div class="btn-group" role="group">
-                                {% if song.file_path or song.original_path %}
-                                <button class="btn btn-sm btn-primary play-song-btn"
-                                        data-play-url="{% url 'play_song' song.id %}"
-                                        data-song-title="{{ song.title|escapejs }}"
-                                        data-song-artist="{{ song.artist|escapejs }}"
-                                        data-song-id="{{ song.id }}">
-                                    <i class="bi bi-play-fill"></i> 播放
-                                </button>
-                                {% else %}
-                                <span class="text-muted me-2">无文件</span>
-                                {% endif %}
-                                <button class="btn btn-sm btn-secondary add-to-playlist-btn"
+                                <button type="button" class="btn btn-sm btn-secondary btn-icon add-to-playlist-btn"
                                         data-song-id="{{ song.id }}"
-                                        type="button">
-                                    <i class="bi bi-list-ul"></i> 歌单
+                                        title="加入歌单" aria-label="加入歌单">
+                                    <i class="bi bi-list-ul"></i>
                                 </button>
                             </div>
                         </td>
@@ -130,11 +127,11 @@
     </div>
 
     <div class="mt-4 d-flex flex-wrap gap-2">
-        <a href="{% url 'random_playlist' %}" class="btn btn-outline-primary">
-            <i class="bi bi-arrow-clockwise"></i> 刷新随机
+        <a href="{% url 'random_playlist' %}" class="btn btn-outline-primary btn-icon" title="刷新随机" aria-label="刷新随机">
+            <i class="bi bi-arrow-clockwise"></i>
         </a>
-        <a href="{% url 'index' %}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> 返回首页
+        <a href="{% url 'index' %}" class="btn btn-secondary btn-icon" title="返回首页" aria-label="返回首页">
+            <i class="bi bi-arrow-left"></i>
         </a>
     </div>
 
@@ -152,9 +149,11 @@
                     <input type="hidden" id="currentSongIdForPlaylist">
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <a href="{% url 'playlist_list' %}" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> 创建新歌单
+                    <button type="button" class="btn btn-secondary btn-icon" data-bs-dismiss="modal" title="取消" aria-label="取消">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                    <a href="{% url 'playlist_list' %}" class="btn btn-primary btn-icon" title="创建新歌单" aria-label="创建新歌单">
+                        <i class="bi bi-plus-circle"></i>
                     </a>
                 </div>
             </div>
@@ -199,14 +198,7 @@ function initRandomPlaylistPage() {
 
     page.querySelectorAll('.play-song-btn:not([data-bound])').forEach(btn => {
         btn.setAttribute('data-bound', '1');
-        btn.addEventListener('click', function() {
-            handlePlayAlbumSong(
-                this.getAttribute('data-play-url'),
-                this.getAttribute('data-song-title'),
-                this.getAttribute('data-song-artist'),
-                parseInt(this.getAttribute('data-song-id'), 10)
-            );
-        });
+        // 播放由 base 全局委托处理
     });
     page.querySelectorAll('.add-to-playlist-btn:not([data-bound])').forEach(btn => {
         btn.setAttribute('data-bound', '1');
@@ -254,8 +246,8 @@ function showPlaylistModal(songId) {
                 playlistList.innerHTML = `
                     <p class="text-muted text-center">您还没有创建任何歌单</p>
                     <div class="text-center">
-                        <a href="{% url 'playlist_list' %}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle"></i> 创建歌单
+                        <a href="{% url 'playlist_list' %}" class="btn btn-primary btn-icon" title="创建歌单" aria-label="创建歌单">
+                            <i class="bi bi-plus-circle"></i>
                         </a>
                     </div>`;
             } else {

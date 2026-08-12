@@ -5,39 +5,80 @@
 {% block content %}
 <style>
 .btn-flat {
-    border: none !important;
+    border: 1px solid transparent !important;
     box-shadow: none !important;
-    border-radius: 4px !important;
-    transition: background-color 0.2s ease;
+    border-radius: 7px !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
     white-space: nowrap;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+}
+.btn-flat.btn-icon {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0 !important;
 }
 .btn-flat:hover {
-    opacity: 0.85;
+    opacity: 1;
 }
 .btn-flat.btn-primary {
-    background-color: #4a90e2;
-    color: white;
+    background-color: #ffffff;
+    border-color: #ffffff !important;
+    color: #181818;
 }
 .btn-flat.btn-primary:hover {
-    background-color: #357abd;
+    background-color: #f2f2f2;
+    border-color: #f2f2f2 !important;
+    color: #181818;
+}
+.btn-flat.btn-primary i {
+    color: #181818;
 }
 .btn-flat.btn-danger {
-    background-color: #dc3545;
-    color: white;
+    background-color: transparent;
+    border-color: rgba(247, 141, 167, 0.4) !important;
+    color: var(--accent);
 }
 .btn-flat.btn-danger:hover {
-    background-color: #c82333;
+    background-color: rgba(247, 141, 167, 0.14);
+    color: #fff;
 }
 .btn-flat.btn-secondary {
-    background-color: #9ca3af;
-    color: white;
+    background-color: var(--bg-muted);
+    border-color: var(--bg-divider) !important;
+    color: var(--text-secondary);
 }
 .btn-flat.btn-secondary:hover {
-    background-color: #6b7280;
+    background-color: var(--bg-divider);
+    color: var(--text-primary);
+}
+/* 歌单详情曲目表：强制高对比（灰阶，非纯黑） */
+.playlist-detail-table,
+.playlist-detail-table th,
+.playlist-detail-table td {
+    color: #F5F5F5 !important;
+    background-color: #2b2b2b !important;
+    border-color: #4a4a4a !important;
+}
+.playlist-detail-table thead th {
+    background-color: #333333 !important;
+    color: #F5F5F5 !important;
+}
+.playlist-detail-table.table-hover > tbody > tr:hover > * {
+    background-color: #3f3f3f !important;
+    color: #ffffff !important;
+}
+.playlist-detail-heading,
+.playlist-detail-heading h2 {
+    color: #F2F2F2 !important;
 }
 </style>
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4 position-relative">
+    <div class="d-flex justify-content-between align-items-center mb-4 position-relative playlist-detail-heading">
         <div>
             <h2><i class="bi bi-music-note-list"></i> {{ playlist.name }}</h2>
             <p class="text-muted mb-0">
@@ -46,10 +87,10 @@
             </p>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-primary" onclick="editPlaylist({{ playlist.id }}, '{{ playlist.name }}')">
-                <i class="bi bi-pencil"></i> 编辑
+            <button type="button" class="btn btn-primary btn-icon" onclick="editPlaylist({{ playlist.id }}, '{{ playlist.name|escapejs }}')" title="编辑" aria-label="编辑">
+                <i class="bi bi-pencil"></i>
             </button>
-            <button class="btn btn-outline-secondary" onclick="location.href='{% url 'playlist_list' %}'" title="关闭">
+            <button type="button" class="btn btn-outline-secondary btn-icon" onclick="location.href='{% url 'playlist_list' %}'" title="关闭" aria-label="关闭">
                 <i class="bi bi-x-lg"></i>
             </button>
         </div>
@@ -57,7 +98,7 @@
     
     {% if playlist_songs %}
     <div class="table-responsive">
-        <table class="table table-hover">
+        <table class="table table-hover playlist-detail-table">
             <thead>
                 <tr>
                     <th>#</th>
@@ -75,7 +116,24 @@
                     data-song-artist="{{ playlist_song.song.artist|escapejs }}" 
                     data-song-url="{% url 'play_song' playlist_song.song.id %}">
                     <td>{{ forloop.counter }}</td>
-                    <td>{{ playlist_song.song.title }}</td>
+                    <td class="song-table-ellipsis" title="{{ playlist_song.song.title|escape }}">
+                        {% if playlist_song.song.file_path or playlist_song.song.original_path %}
+                        <button type="button"
+                                class="song-title-play play-song-btn"
+                                data-play-url="{% url 'play_song' playlist_song.song.id %}"
+                                data-song-title="{{ playlist_song.song.title|escapejs }}"
+                                data-song-artist="{{ playlist_song.song.artist|escapejs }}"
+                                data-song-id="{{ playlist_song.song.id }}"
+                                data-playlist-index="{{ forloop.counter0 }}"
+                                title="播放 / 暂停"
+                                aria-label="播放 {{ playlist_song.song.title|escape }}">
+                            <i class="bi bi-play-fill song-play-icon" aria-hidden="true"></i>
+                            <span class="song-play-label">{{ playlist_song.song.title }}</span>
+                        </button>
+                        {% else %}
+                        <span class="text-muted">{{ playlist_song.song.title }}</span>
+                        {% endif %}
+                    </td>
                     <td>{{ playlist_song.song.artist }}</td>
                     <td>{{ playlist_song.song.album.name|default:"-" }}</td>
                     <td>
@@ -86,20 +144,16 @@
                         {% endif %}
                     </td>
                     <td>
-                        <div class="btn-group" role="group" style="white-space: nowrap;">
-                            {% if playlist_song.song.file_path or playlist_song.song.original_path %}
-                            <button class="btn btn-sm btn-flat btn-primary" 
-                                    onclick="playSongFromPlaylist('{% url 'play_song' playlist_song.song.id %}', '{{ playlist_song.song.title|escapejs }}', '{{ playlist_song.song.artist|escapejs }}', {{ playlist_song.song.id }}, {{ forloop.counter0 }})">
-                                <i class="bi bi-play-fill"></i> 播放
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-flat btn-secondary btn-icon"
+                                    onclick="showPlaylistModal({{ playlist_song.song.id }})"
+                                    title="加入歌单" aria-label="加入歌单">
+                                <i class="bi bi-list-ul"></i>
                             </button>
-                            {% endif %}
-                            <button class="btn btn-sm btn-flat btn-secondary" type="button"
-                                    onclick="showPlaylistModal({{ playlist_song.song.id }})">
-                                <i class="bi bi-list-ul"></i> 歌单
-                            </button>
-                            <button class="btn btn-sm btn-flat btn-danger" 
-                                    onclick="removeFromPlaylist({{ playlist.id }}, {{ playlist_song.song.id }}, '{{ playlist_song.song.title }}')">
-                                <i class="bi bi-trash"></i> 移除
+                            <button type="button" class="btn btn-sm btn-flat btn-danger btn-icon" 
+                                    onclick="removeFromPlaylist({{ playlist.id }}, {{ playlist_song.song.id }}, '{{ playlist_song.song.title|escapejs }}')"
+                                    title="移除" aria-label="移除">
+                                <i class="bi bi-trash"></i>
                             </button>
                         </div>
                     </td>
@@ -131,9 +185,11 @@
                 <input type="hidden" id="currentSongIdForPlaylist">
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <a href="{% url 'playlist_list' %}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> 创建新歌单
+                <button type="button" class="btn btn-secondary btn-icon" data-bs-dismiss="modal" title="取消" aria-label="取消">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <a href="{% url 'playlist_list' %}" class="btn btn-primary btn-icon" title="创建新歌单" aria-label="创建新歌单">
+                    <i class="bi bi-plus-circle"></i>
                 </a>
             </div>
         </div>
@@ -158,8 +214,12 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" onclick="savePlaylist()">保存</button>
+                <button type="button" class="btn btn-secondary btn-icon" data-bs-dismiss="modal" title="取消" aria-label="取消">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <button type="button" class="btn btn-primary btn-icon" onclick="savePlaylist()" title="保存" aria-label="保存">
+                    <i class="bi bi-check-lg"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -223,8 +283,8 @@ function showPlaylistModal(songId) {
             playlistList.innerHTML = `
                 <p class="text-muted text-center">没有其他歌单可添加，请先创建新歌单</p>
                 <div class="text-center mt-2">
-                    <a href="{% url 'playlist_list' %}" class="btn btn-sm btn-primary">
-                        <i class="bi bi-plus-circle"></i> 创建歌单
+                    <a href="{% url 'playlist_list' %}" class="btn btn-sm btn-primary btn-icon" title="创建歌单" aria-label="创建歌单">
+                        <i class="bi bi-plus-circle"></i>
                     </a>
                 </div>
             `;
@@ -258,8 +318,8 @@ function showPlaylistModal(songId) {
         playlistList.innerHTML = `
             <p class="text-danger text-center">${escapeHtml(error.message || '加载失败')}</p>
             <div class="text-center mt-2">
-                <button type="button" class="btn btn-sm btn-primary" onclick="showPlaylistModal(${songId})">
-                    <i class="bi bi-arrow-clockwise"></i> 重试
+                <button type="button" class="btn btn-sm btn-primary btn-icon" onclick="showPlaylistModal(${songId})" title="重试" aria-label="重试">
+                    <i class="bi bi-arrow-clockwise"></i>
                 </button>
             </div>
         `;
@@ -436,19 +496,15 @@ function playSongFromPlaylist(songUrl, songTitle, artist, songId, songIndex) {
         }
     });
     
-    // 如果从data属性获取失败，尝试从onclick解析（备用方案）
+    // 如果从data属性获取失败，尝试从播放按钮收集（备用）
     if (playlistSongs.length === 0) {
-        const playButtons = document.querySelectorAll('button[onclick*="playSongFromPlaylist"]');
-        playButtons.forEach((button) => {
-            const onclick = button.getAttribute('onclick');
-            const match = onclick.match(/playSongFromPlaylist\('([^']+)',\s*'([^']+)',\s*'([^']+)',\s*(\d+),\s*(\d+)\)/);
-            if (match) {
-                playlistSongs.push({
-                    url: match[1],
-                    title: match[2].replace(/\\'/g, "'").replace(/\\"/g, '"'),
-                    artist: match[3].replace(/\\'/g, "'").replace(/\\"/g, '"'),
-                    id: parseInt(match[4])
-                });
+        document.querySelectorAll('.play-song-btn').forEach((button) => {
+            const url = button.dataset.playUrl;
+            const title = button.dataset.songTitle;
+            const artist = button.dataset.songArtist;
+            const id = parseInt(button.dataset.songId, 10);
+            if (url && title && artist && id) {
+                playlistSongs.push({ url, title, artist, id });
             }
         });
     }
@@ -476,6 +532,7 @@ function playSongFromPlaylist(songUrl, songTitle, artist, songId, songIndex) {
         playSong(songUrl, songTitle, artist, songId);
     }
 }
+window.playSongFromPlaylist = playSongFromPlaylist;
 
 function getCookie(name) {
     let cookieValue = null;

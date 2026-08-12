@@ -11,8 +11,8 @@
     #song-list .table-song-layout col.col-title { width: 34%; }
     #song-list .table-song-layout col.col-artist { width: 20.5%; }
     #song-list .table-song-layout col.col-duration { width: 7%; }
-    #song-list .table-song-layout col.col-actions { width: 15%; }
-    #song-list .table-song-layout col.col-album { width: 20.5%; }
+    #song-list .table-song-layout col.col-actions { width: 18%; }
+    #song-list .table-song-layout col.col-album { width: 17.5%; }
     #song-list .table-song-layout .song-table-ellipsis {
         overflow: hidden;
         text-overflow: ellipsis;
@@ -26,47 +26,103 @@
     #song-list .table-song-layout .col-actions-cell {
         white-space: nowrap;
     }
+
+    /* 分页细节见 base 全局灰白样式；此处仅补布局 */
+    .pagination {
+        gap: 6px;
+    }
+    .pagination .page-item {
+        margin: 0;
+    }
+    .pagination .page-link {
+        padding: 6px 12px;
+        font-size: 13px;
+        line-height: 1.3;
+        min-height: 34px;
+        display: inline-flex;
+        align-items: center;
+        border-radius: 8px !important;
+    }
+    .page-jump-item .page-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: default;
+    }
+    .page-jump-input {
+        width: 3.6rem;
+        height: 28px;
+        padding: 0 6px;
+        border-radius: 6px;
+        font-size: 13px;
+        text-align: center;
+    }
+    .page-jump-input:focus {
+        outline: none;
+        border-color: var(--bg-divider);
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+    }
+    .toolbar-actions .btn {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+    }
+    .page-jump-btn {
+        border-radius: 6px;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid" data-user-authenticated="true">
+<div class="container-fluid" data-user-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
+<script>
+window.favoritedSongIds = new Set([{% for id in favorited_ids %}{{ id }}{% if not forloop.last %},{% endif %}{% endfor %}]);
+</script>
     <!-- 搜索和操作按钮 -->
     <div class="mb-4">
         <!-- 操作按钮行：右对齐 -->
-        <div class="d-flex justify-content-end gap-2 mb-3">
-            <button class="btn btn-primary" onclick="showArtistsModal()" title="按首字母浏览歌手">
-                <i class="bi bi-person-lines-fill"></i> 歌手
+        <div class="d-flex justify-content-end gap-2 mb-3 toolbar-actions">
+            <button type="button" class="btn btn-primary btn-icon" onclick="showArtistsModal()" title="歌手" aria-label="歌手">
+                <i class="bi bi-person-lines-fill"></i>
             </button>
-            <button class="btn btn-scan" onclick="scanMusic(event)">
-                <i class="bi bi-folder2-open"></i> 扫描音乐
+            <button type="button" class="btn btn-primary btn-scan btn-icon" onclick="scanMusic(event)" title="扫描音乐" aria-label="扫描音乐">
+                <i class="bi bi-folder2-open"></i>
             </button>
         </div>
         
         <!-- 搜索栏行：占据整行 -->
         <div>
             <div class="input-group">
-                <div class="btn-group" role="group">
+                <div class="btn-group" role="group" aria-label="搜索模式">
                     <input type="radio" class="btn-check" name="searchMode" id="searchModeSong" value="song" checked>
-                    <label class="btn btn-outline-secondary" for="searchModeSong" title="搜索歌曲">
-                        <i class="bi bi-music-note"></i> 歌曲
+                    <label class="btn btn-outline-secondary btn-icon" for="searchModeSong" title="按歌曲搜索" aria-label="按歌曲搜索">
+                        <i class="bi bi-music-note"></i>
                     </label>
                     
                     <input type="radio" class="btn-check" name="searchMode" id="searchModeArtist" value="artist">
-                    <label class="btn btn-outline-secondary" for="searchModeArtist" title="搜索歌手">
-                        <i class="bi bi-person"></i> 歌手
+                    <label class="btn btn-outline-secondary btn-icon" for="searchModeArtist" title="按歌手搜索" aria-label="按歌手搜索">
+                        <i class="bi bi-person"></i>
                     </label>
                 </div>
                 <input type="text" class="form-control" id="searchInput" placeholder="搜索歌曲或作者..." onkeyup="handleSearchKeyup(event)">
-                <button class="btn btn-outline-primary" onclick="performSearch()">
-                    <i class="bi bi-search"></i> 搜索
+                <button type="button" class="btn btn-outline-primary btn-icon" onclick="performSearch()" title="搜索" aria-label="搜索">
+                    <i class="bi bi-search"></i>
                 </button>
             </div>
             <div id="searchResults" class="mt-3" style="display: none;">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>搜索结果</span>
-                        <button class="btn btn-sm btn-secondary" onclick="closeSearchResults()">
+                        <button type="button" class="btn btn-sm btn-secondary btn-icon" onclick="closeSearchResults()" title="关闭" aria-label="关闭">
                             <i class="bi bi-x"></i>
                         </button>
                     </div>
@@ -113,9 +169,11 @@
                         <input type="hidden" id="currentSongIdForPlaylist">
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                        <a href="{% url 'playlist_list' %}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle"></i> 创建新歌单
+                        <button type="button" class="btn btn-secondary btn-icon" data-bs-dismiss="modal" title="取消" aria-label="取消">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                        <a href="{% url 'playlist_list' %}" class="btn btn-primary btn-icon" title="创建新歌单" aria-label="创建新歌单">
+                            <i class="bi bi-plus-circle"></i>
                         </a>
                     </div>
                 </div>
@@ -141,7 +199,9 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-secondary btn-icon" data-bs-dismiss="modal" title="关闭" aria-label="关闭">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -186,7 +246,7 @@
         <!-- 分页导航 -->
         {% if albums.has_other_pages %}
         <nav aria-label="专辑分页" class="mt-4">
-            <ul class="pagination justify-content-center">
+            <ul class="pagination justify-content-center flex-wrap">
                 {% if albums.has_previous %}
                 <li class="page-item">
                     <a class="page-link" href="?album_page=1{% if songs.number > 1 %}&song_page={{ songs.number }}{% endif %}">&laquo; 首页</a>
@@ -207,6 +267,15 @@
                     <span class="page-link">
                         第 {{ albums.number }} 页，共 {{ albums.paginator.num_pages }} 页
                     </span>
+                </li>
+                <li class="page-item page-jump-item">
+                    <form class="page-link" onsubmit="return jumpToPagedList(event, 'album_page', {{ albums.paginator.num_pages }}, {{ songs.number }}, 'albums');">
+                        <label for="albumPageJump" class="visually-hidden">跳至页码</label>
+                        跳至
+                        <input id="albumPageJump" class="page-jump-input" type="number" min="1" max="{{ albums.paginator.num_pages }}" value="{{ albums.number }}" required>
+                        页
+                        <button type="submit" class="page-jump-btn" title="跳转" aria-label="跳转"><i class="bi bi-arrow-right"></i></button>
+                    </form>
                 </li>
                 
                 {% if albums.has_next %}
@@ -261,7 +330,23 @@
                     {% for song in songs %}
                     <tr>
                         <td>{{ songs_start_index|add:forloop.counter0 }}</td>
-                        <td class="song-table-ellipsis" title="{{ song.title|escape }}">{{ song.title }}</td>
+                        <td class="song-table-ellipsis" title="{{ song.title|escape }}">
+                            {% if song.file_path or song.original_path %}
+                            <button type="button"
+                                    class="song-title-play play-song-btn"
+                                    data-play-url="{% url 'play_song' song.id %}"
+                                    data-song-title="{{ song.title|escapejs }}"
+                                    data-song-artist="{{ song.artist|escapejs }}"
+                                    data-song-id="{{ song.id }}"
+                                    title="播放 / 暂停"
+                                    aria-label="播放 {{ song.title|escape }}">
+                                <i class="bi bi-play-fill song-play-icon" aria-hidden="true"></i>
+                                <span class="song-play-label">{{ song.title }}</span>
+                            </button>
+                            {% else %}
+                            <span class="text-muted">{{ song.title }}</span>
+                            {% endif %}
+                        </td>
                         <td class="song-table-ellipsis" title="{{ song.artist|escape }}">{{ song.artist }}</td>
                         <td>
                             {% if song.duration %}
@@ -272,17 +357,14 @@
                         </td>
                         <td class="col-actions-cell">
                             <div class="btn-group" role="group">
-                                {% if song.file_path or song.original_path %}
-                                <button class="btn btn-sm btn-primary play-song-btn" 
-                                        data-play-url="{% url 'play_song' song.id %}"
-                                        data-song-title="{{ song.title|escapejs }}"
-                                        data-song-artist="{{ song.artist|escapejs }}"
-                                        data-song-id="{{ song.id }}">
-                                    <i class="bi bi-play-fill"></i> 播放
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-icon" onclick="showPlaylistModal({{ song.id }})" title="加入歌单" aria-label="加入歌单">
+                                    <i class="bi bi-list-ul"></i>
                                 </button>
-                                {% endif %}
-                                <button class="btn btn-sm btn-outline-secondary" onclick="showPlaylistModal({{ song.id }})" type="button">
-                                    <i class="bi bi-list-ul"></i> 歌单
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger btn-icon btn-favorite {% if song.id in favorited_ids %}is-favorited{% endif %}"
+                                        onclick="toggleFavorite({{ song.id }}, this)"
+                                        title="收藏" aria-label="收藏">
+                                    <i class="bi {% if song.id in favorited_ids %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
                                 </button>
                             </div>
                         </td>
@@ -300,7 +382,7 @@
         <!-- 歌曲分页导航 -->
         {% if songs.has_other_pages %}
         <nav aria-label="歌曲分页" class="mt-4">
-            <ul class="pagination justify-content-center">
+            <ul class="pagination justify-content-center flex-wrap">
                 {% if songs.has_previous %}
                 <li class="page-item">
                     <a class="page-link" href="?song_page=1{% if albums.number > 1 %}&album_page={{ albums.number }}{% endif %}">&laquo; 首页</a>
@@ -321,6 +403,15 @@
                     <span class="page-link">
                         第 {{ songs.number }} 页，共 {{ songs.paginator.num_pages }} 页
                     </span>
+                </li>
+                <li class="page-item page-jump-item">
+                    <form class="page-link" onsubmit="return jumpToPagedList(event, 'song_page', {{ songs.paginator.num_pages }}, {{ albums.number }}, 'song-list');">
+                        <label for="songPageJump" class="visually-hidden">跳至页码</label>
+                        跳至
+                        <input id="songPageJump" class="page-jump-input" type="number" min="1" max="{{ songs.paginator.num_pages }}" value="{{ songs.number }}" required>
+                        页
+                        <button type="submit" class="page-jump-btn" title="跳转" aria-label="跳转"><i class="bi bi-arrow-right"></i></button>
+                    </form>
                 </li>
                 
                 {% if songs.has_next %}
@@ -387,37 +478,30 @@ function collectCurrentSongList() {
 function collectSearchResultList() {
     const songList = [];
     const searchResultsTable = document.querySelector('#searchResultsContent tbody');
-    
-    if (!searchResultsTable) {
-        return songList;
-    }
-    
-    // 从搜索结果表格中获取所有行
-    const rows = searchResultsTable.querySelectorAll('tr');
-    
-    rows.forEach(row => {
-        const playButton = row.querySelector('button[onclick*="handlePlaySong"]');
-        if (playButton) {
-            const onclick = playButton.getAttribute('onclick');
-            // 匹配 handlePlaySong 函数调用
-            const match = onclick.match(/handlePlaySong\('([^']+)',\s*'([^']+)',\s*'([^']+)',\s*(\d+)/);
-            if (match) {
-                songList.push({
-                    url: match[1],
-                    title: match[2].replace(/\\'/g, "'").replace(/&quot;/g, '"'),
-                    artist: match[3].replace(/\\'/g, "'").replace(/&quot;/g, '"'),
-                    id: parseInt(match[4])
-                });
-            }
+    if (!searchResultsTable) return songList;
+    searchResultsTable.querySelectorAll('.play-song-btn').forEach(btn => {
+        const playUrl = btn.dataset.playUrl;
+        const title = btn.dataset.songTitle;
+        const artist = btn.dataset.songArtist;
+        const songId = parseInt(btn.dataset.songId, 10);
+        if (playUrl && title && artist && songId) {
+            songList.push({ url: playUrl, title, artist, id: songId });
         }
     });
-    
-    console.log(`从搜索结果收集到 ${songList.length} 首歌曲`);
     return songList;
 }
 
 // 统一的播放处理函数（支持自动添加列表到播放器）
 function handlePlaySong(playUrl, title, artist, songId, source = 'main') {
+    const player = document.getElementById('audioPlayer');
+    const sameCurrent = typeof currentSongId !== 'undefined' && currentSongId === songId;
+    if (sameCurrent && player && player.src) {
+        if (typeof togglePlayPause === 'function') {
+            togglePlayPause();
+        }
+        return;
+    }
+
     // 自动将当前列表添加到播放器
     {
         let currentList = [];
@@ -448,21 +532,6 @@ function handlePlaySong(playUrl, title, artist, songId, source = 'main') {
     playSong(playUrl, title, artist, songId);
 }
 
-// 事件委托：处理播放按钮点击
-document.addEventListener('click', function(e) {
-    if (e.target.closest('.play-song-btn')) {
-        const btn = e.target.closest('.play-song-btn');
-        const playUrl = btn.dataset.playUrl;
-        const title = btn.dataset.songTitle;
-        const artist = btn.dataset.songArtist;
-        const songId = parseInt(btn.dataset.songId);
-        
-        // 使用统一的播放处理函数
-        handlePlaySong(playUrl, title, artist, songId, 'main');
-    }
-    
-});
-
 function handleSearchKeyup(event) {
     if (event.key === 'Enter') {
         performSearch();
@@ -483,6 +552,9 @@ function handleSearchKeyup(event) {
 
 // 监听搜索模式切换
 document.addEventListener('DOMContentLoaded', function() {
+    if (typeof window.syncSongTitlePlayStates === 'function') {
+        window.syncSongTitlePlayStates();
+    }
     const searchModeInputs = document.querySelectorAll('input[name="searchMode"]');
     const searchInput = document.getElementById('searchInput');
     
@@ -536,19 +608,30 @@ function performSongSearch(query) {
                     const artistEscaped = song.artist.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                     html += `
                         <tr>
-                            <td>${song.title}</td>
+                            <td>
+                                <button type="button"
+                                        class="song-title-play play-song-btn"
+                                        data-play-url="/play/${song.id}/"
+                                        data-song-title="${titleEscaped}"
+                                        data-song-artist="${artistEscaped}"
+                                        data-song-id="${song.id}"
+                                        title="播放 / 暂停"
+                                        aria-label="播放">
+                                    <i class="bi bi-play-fill song-play-icon" aria-hidden="true"></i>
+                                    <span class="song-play-label">${song.title}</span>
+                                </button>
+                            </td>
                             <td>${song.artist}</td>
                             <td>${song.album_name || '-'}</td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    <button class="btn btn-sm btn-primary" 
-                                            onclick="handlePlaySong('/play/${song.id}/', '${titleEscaped}', '${artistEscaped}', ${song.id}, 'search')"
-                                            style="white-space: nowrap;">
-                                        <i class="bi bi-play-fill"></i><span>播放</span>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary btn-icon" onclick="showPlaylistModal(${song.id})"
+                                            title="加入歌单" aria-label="加入歌单">
+                                        <i class="bi bi-list-ul"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="showPlaylistModal(${song.id})"
-                                            style="white-space: nowrap;">
-                                        <i class="bi bi-list-ul"></i><span>歌单</span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-icon btn-favorite ${window.favoritedSongIds && window.favoritedSongIds.has(song.id) ? 'is-favorited' : ''}"
+                                            onclick="toggleFavorite(${song.id}, this)" title="收藏" aria-label="收藏">
+                                        <i class="bi ${window.favoritedSongIds && window.favoritedSongIds.has(song.id) ? 'bi-heart-fill' : 'bi-heart'}"></i>
                                     </button>
                                 </div>
                             </td>
@@ -559,6 +642,7 @@ function performSongSearch(query) {
                 html += '</tbody></table>';
                 contentDiv.innerHTML = html;
                 resultsDiv.style.display = 'block';
+                if (typeof window.syncSongTitlePlayStates === 'function') window.syncSongTitlePlayStates();
             } else {
                 contentDiv.innerHTML = '<p class="text-muted text-center">没有找到相关歌曲</p>';
                 resultsDiv.style.display = 'block';
@@ -625,19 +709,30 @@ function searchArtistSongs(artist) {
                     const artistEscaped = song.artist.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                     html += `
                         <tr>
-                            <td>${song.title}</td>
+                            <td>
+                                <button type="button"
+                                        class="song-title-play play-song-btn"
+                                        data-play-url="/play/${song.id}/"
+                                        data-song-title="${titleEscaped}"
+                                        data-song-artist="${artistEscaped}"
+                                        data-song-id="${song.id}"
+                                        title="播放 / 暂停"
+                                        aria-label="播放">
+                                    <i class="bi bi-play-fill song-play-icon" aria-hidden="true"></i>
+                                    <span class="song-play-label">${song.title}</span>
+                                </button>
+                            </td>
                             <td>${song.artist}</td>
                             <td>${song.album_name || '-'}</td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    <button class="btn btn-sm btn-primary" 
-                                            onclick="handlePlaySong('/play/${song.id}/', '${titleEscaped}', '${artistEscaped}', ${song.id}, 'search')"
-                                            style="white-space: nowrap;">
-                                        <i class="bi bi-play-fill"></i><span>播放</span>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary btn-icon" onclick="showPlaylistModal(${song.id})"
+                                            title="加入歌单" aria-label="加入歌单">
+                                        <i class="bi bi-list-ul"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="showPlaylistModal(${song.id})"
-                                            style="white-space: nowrap;">
-                                        <i class="bi bi-list-ul"></i><span>歌单</span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-icon btn-favorite ${window.favoritedSongIds && window.favoritedSongIds.has(song.id) ? 'is-favorited' : ''}"
+                                            onclick="toggleFavorite(${song.id}, this)" title="收藏" aria-label="收藏">
+                                        <i class="bi ${window.favoritedSongIds && window.favoritedSongIds.has(song.id) ? 'bi-heart-fill' : 'bi-heart'}"></i>
                                     </button>
                                 </div>
                             </td>
@@ -648,6 +743,7 @@ function searchArtistSongs(artist) {
                 html += '</tbody></table>';
                 contentDiv.innerHTML = html;
                 resultsDiv.style.display = 'block';
+                if (typeof window.syncSongTitlePlayStates === 'function') window.syncSongTitlePlayStates();
             } else {
                 contentDiv.innerHTML = `<p class="text-muted text-center">${escapeHtml(artist)} 暂无歌曲</p>`;
                 resultsDiv.style.display = 'block';
@@ -856,17 +952,23 @@ function showPlaylistModal(songId) {
             const isJson = contentType.includes('application/json');
             
             if (!response.ok) {
+                if (response.status === 401) {
+                    if (confirm('加入歌单需要登录，是否前往登录？')) {
+                        window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+                    }
+                    throw new Error('请先登录');
+                }
                 // 尝试解析错误信息
                 if (isJson) {
                     try {
                         const errorData = JSON.parse(text);
                         throw new Error(errorData.error || errorData.detail || `HTTP错误: ${response.status}`);
                     } catch (e) {
+                        if (e.message === '请先登录') throw e;
                         throw new Error(`HTTP错误: ${response.status}`);
                     }
                 } else {
-                    // 如果是401或403，可能是认证问题（暂时忽略）
-                    if (response.status === 401 || response.status === 403) {
+                    if (response.status === 403) {
                         throw new Error('访问被拒绝');
                     }
                     throw new Error(`HTTP错误: ${response.status}`);
@@ -898,8 +1000,8 @@ function showPlaylistModal(songId) {
                 playlistList.innerHTML = `
                     <p class="text-muted text-center">您还没有创建任何歌单</p>
                     <div class="text-center">
-                        <a href="{% url 'playlist_list' %}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle"></i> 创建歌单
+                        <a href="{% url 'playlist_list' %}" class="btn btn-primary btn-icon" title="创建歌单" aria-label="创建歌单">
+                            <i class="bi bi-plus-circle"></i>
                         </a>
                     </div>
                 `;
@@ -959,8 +1061,8 @@ function showPlaylistModal(songId) {
             playlistList.innerHTML = `
                 <p class="text-danger text-center">${escapeHtml(errorMessage)}</p>
                 <div class="text-center mt-3">
-                    <button class="btn btn-sm btn-primary" onclick="showPlaylistModal(${songId})">
-                        <i class="bi bi-arrow-clockwise"></i> 重试
+                    <button type="button" class="btn btn-sm btn-primary btn-icon" onclick="showPlaylistModal(${songId})" title="重试" aria-label="重试">
+                        <i class="bi bi-arrow-clockwise"></i>
                     </button>
                 </div>
             `;
@@ -1127,6 +1229,40 @@ function enhancePaginationLinks() {
         }
     });
 }
+
+/**
+ * 跳转到指定页码。
+ * @param {Event} event
+ * @param {'song_page'|'album_page'} pageParam 主分页参数名
+ * @param {number} totalPages 总页数
+ * @param {number} otherPage 另一侧分页当前页（用于保留 album/song 状态）
+ * @param {'song-list'|'albums'} hashAnchor 定位锚点
+ */
+function jumpToPagedList(event, pageParam, totalPages, otherPage, hashAnchor) {
+    event.preventDefault();
+    const form = event.target;
+    const input = form.querySelector('.page-jump-input');
+    let page = parseInt(input && input.value, 10);
+    if (Number.isNaN(page) || page < 1) page = 1;
+    if (page > totalPages) page = totalPages;
+    if (input) input.value = page;
+
+    const params = new URLSearchParams();
+    params.set(pageParam, String(page));
+    if (pageParam === 'song_page') {
+        if (otherPage > 1) params.set('album_page', String(otherPage));
+    } else if (otherPage > 1) {
+        params.set('song_page', String(otherPage));
+    }
+    const url = `/?${params.toString()}#${hashAnchor}`;
+    if (typeof window.navigateToUrl === 'function') {
+        window.navigateToUrl(url);
+    } else {
+        window.location.href = url;
+    }
+    return false;
+}
+window.jumpToPagedList = jumpToPagedList;
 
 // 页面加载完成后执行自动定位和链接优化
 (function() {

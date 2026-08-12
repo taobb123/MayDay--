@@ -1,0 +1,112 @@
+{% extends 'mayday_app/base.html' %}
+
+{% block title %}会员 - Mayday{% endblock %}
+{% block page_heading %}会员{% endblock %}
+
+{% block content %}
+<div class="membership-panel">
+    <p class="text-muted mb-3">{{ membership.demo_note }}</p>
+    <p class="text-muted small mb-3">
+        支付模式：<code>{{ membership.payment.effective_provider }}</code>
+        · {{ membership.payment.amount_cents }} 分 / {{ membership.payment.days }} 天
+    </p>
+
+    <div class="membership-card mb-4">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <div class="membership-plan-label">当前套餐</div>
+                <h3 class="mb-1">{{ membership.plan_label }}</h3>
+                {% if membership.is_member and membership.expires_at %}
+                <p class="text-muted mb-0">到期：{{ membership.expires_at }}</p>
+                {% elif not membership.is_member %}
+                <p class="text-muted mb-0">
+                    歌单 {{ membership.playlist_count }}
+                    {% if membership.playlist_limit %}/ {{ membership.playlist_limit }}{% endif %}
+                </p>
+                {% endif %}
+            </div>
+            {% if not membership.is_member %}
+            <button type="button" class="btn btn-primary btn-icon" id="upgradeBtn" onclick="startMembershipCheckout()" title="开通会员" aria-label="开通会员">
+                <i class="bi bi-gem"></i>
+            </button>
+            {% else %}
+            <span class="badge bg-success">会员有效</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <h5 class="mb-3">权益预览</h5>
+    <ul class="membership-benefits">
+        {% for item in membership.benefits_preview %}
+        <li>{{ item }}</li>
+        {% endfor %}
+    </ul>
+    <p class="text-muted small mt-3">
+        密钥仅通过环境变量配置（如 <code>STRIPE_SECRET_KEY</code>）。未配置时走演示订单履约。
+        国内微信/支付宝支付另开切片。
+    </p>
+</div>
+
+<style>
+.membership-panel { max-width: 640px; }
+.membership-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--bg-divider);
+    border-radius: 12px;
+    padding: 20px 22px;
+}
+.membership-plan-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+}
+.membership-benefits {
+    padding-left: 1.2rem;
+    color: var(--text-secondary);
+}
+.membership-benefits li { margin-bottom: 0.4rem; }
+</style>
+
+<script>
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
+function startMembershipCheckout() {
+    const csrf = getCookie('csrftoken');
+    if (!csrf) {
+        alert('缺少 CSRF，请刷新后重试');
+        return;
+    }
+    const btn = document.getElementById('upgradeBtn');
+    if (btn) btn.disabled = true;
+    fetch('/api/payments/checkout/', {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrf
+        },
+        credentials: 'same-origin',
+        body: '{}'
+    })
+    .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || '开通失败');
+        if (data.mode === 'stripe' && data.checkout_url) {
+            window.location.href = data.checkout_url;
+            return;
+        }
+        alert(data.message || '已开通');
+        window.location.href = '/membership/success/' + (data.order_id ? ('?order_id=' + data.order_id) : '');
+    })
+    .catch((err) => {
+        alert(err.message || '开通失败');
+        if (btn) btn.disabled = false;
+    });
+}
+</script>
+{% endblock %}

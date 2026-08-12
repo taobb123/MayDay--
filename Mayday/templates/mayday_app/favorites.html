@@ -1,0 +1,63 @@
+{% extends 'mayday_app/base.html' %}
+
+{% block title %}我喜欢的 - Mayday{% endblock %}
+{% block page_heading %}我喜欢的{% endblock %}
+
+{% block content %}
+<div class="favorites-panel">
+    <p class="text-muted mb-3">共 {{ favorites|length }} 首收藏</p>
+
+    {% if favorites %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>歌曲</th>
+                    <th>艺术家</th>
+                    <th>专辑</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fav in favorites %}
+                <tr data-song-id="{{ fav.song.id }}">
+                    <td>{{ forloop.counter }}</td>
+                    <td>
+                        {% if fav.song.file_path or fav.song.original_path %}
+                        <button type="button"
+                                class="song-title-play play-song-btn"
+                                data-play-url="{% url 'play_song' fav.song.id %}"
+                                data-song-title="{{ fav.song.title|escapejs }}"
+                                data-song-artist="{{ fav.song.artist|escapejs }}"
+                                data-song-id="{{ fav.song.id }}"
+                                title="播放 / 暂停"
+                                aria-label="播放 {{ fav.song.title|escape }}">
+                            <i class="bi bi-play-fill song-play-icon" aria-hidden="true"></i>
+                            <span class="song-play-label">{{ fav.song.title }}</span>
+                        </button>
+                        {% else %}
+                        <span class="text-muted">{{ fav.song.title }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ fav.song.artist }}</td>
+                    <td>{{ fav.song.album.name|default:"-" }}</td>
+                    <td class="text-nowrap">
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-icon"
+                                onclick="toggleFavorite({{ fav.song.id }}, this)" title="取消收藏" aria-label="取消收藏">
+                            <i class="bi bi-heart-fill"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted">还没有收藏。去首页点♡ 收藏喜欢的歌吧。</p>
+    <a href="{% url 'index' %}" class="btn btn-outline-primary btn-sm btn-icon" title="去首页" aria-label="去首页">
+        <i class="bi bi-house"></i>
+    </a>
+    {% endif %}
+</div>
+{% endblock %}
