@@ -14,11 +14,12 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.http import FileResponse, Http404, JsonResponse
 import json
 from django.conf import settings
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+import math
 import os
 from pathlib import Path
 from .models import Album, Song, Tour, Quote, Image, Playlist, PlaylistSong, Favorite
@@ -415,6 +416,22 @@ def play_song(request, song_id):
     return HttpResponse("歌曲文件不存在，请检查外部硬盘是否已连接", status=404, content_type='text/plain; charset=utf-8')
 
 
+def _song_list_pages_by_id(song_ids):
+    """首页歌曲列表页码：与 index() 一致，按 -id、每页 SongPagination.page_size。"""
+    if not song_ids:
+        return {}
+    unique_ids = list(dict.fromkeys(song_ids))
+    counts = Song.objects.aggregate(
+        **{f'c_{sid}': Count('pk', filter=Q(id__gte=sid)) for sid in unique_ids}
+    )
+    page_size = SongPagination.page_size
+    pages = {}
+    for sid in unique_ids:
+        rank = counts.get(f'c_{sid}') or 0
+        pages[sid] = max(1, math.ceil(rank / page_size)) if rank else 1
+    return pages
+
+
 class SearchView(APIView):
     """搜索视图 - 支持歌曲标题和作者模糊搜索"""
     permission_classes = [AllowAny]
@@ -426,14 +443,18 @@ class SearchView(APIView):
             return Response({'results': []})
         
         # 模糊搜索歌曲标题和作者
-        songs = Song.objects.filter(
+        songs = list(Song.objects.filter(
             Q(title__icontains=query) | Q(artist__icontains=query)
-        ).select_related('album')[:50]  # 限制返回50条
+        ).select_related('album')[:50])  # 限制返回50条
         
         serializer = SongSerializer(songs, many=True)
+        results = serializer.data
+        list_pages = _song_list_pages_by_id([song.id for song in songs])
+        for item in results:
+            item['list_page'] = list_pages.get(item['id'])
         return Response({
-            'results': serializer.data,
-            'count': len(serializer.data)
+            'results': results,
+            'count': len(results)
         })
 
 

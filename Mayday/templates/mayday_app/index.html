@@ -635,12 +635,16 @@ function performSongSearch(query) {
             
             if (data.results && data.results.length > 0) {
                 let html = '<table class="table table-hover">';
-                html += '<thead><tr><th>歌曲</th><th>艺术家</th><th>专辑</th><th>操作</th></tr></thead>';
+                html += '<thead><tr><th>歌曲</th><th>艺术家</th><th>专辑</th><th>列表页</th><th>操作</th></tr></thead>';
                 html += '<tbody>';
                 
                 data.results.forEach(song => {
                     const titleEscaped = song.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                     const artistEscaped = song.artist.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    const listPage = Number(song.list_page);
+                    const listPageCell = Number.isInteger(listPage) && listPage > 0
+                        ? `<td><a href="/?song_page=${listPage}#song-list" class="song-list-page-link">第 ${listPage} 页</a></td>`
+                        : '<td class="text-muted">-</td>';
                     html += `
                         <tr>
                             <td>
@@ -658,6 +662,7 @@ function performSongSearch(query) {
                             </td>
                             <td>${song.artist}</td>
                             <td>${song.album_name || '-'}</td>
+                            ${listPageCell}
                             <td>
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-sm btn-outline-secondary btn-icon" onclick="showPlaylistModal(${song.id})"
