@@ -36,6 +36,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'mayday_app.middleware.GuestSessionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -117,8 +118,8 @@ LYRICS_DIRECTORY = r'C:\Lyrics'
 KAFKA_BOOTSTRAP_SERVERS = ['localhost:9092']
 KAFKA_ENABLED = False  # Set to True when Kafka is configured
 
-# Auth
-LOGIN_URL = '/login/'
+# Auth（前端已取消登录，LOGIN_URL 仅作兜底，避免再跳到登录页）
+LOGIN_URL = '/'
 
 # Payments (secrets via env / .env only — never commit keys)
 PAYMENT_PROVIDER = os.getenv('PAYMENT_PROVIDER', 'mock')  # mock | stripe

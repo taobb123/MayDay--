@@ -630,6 +630,15 @@
             animation:
                 lyricFloatIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards,
                 lyricGlowPulse 2.4s ease-in-out 0.55s infinite;
+            animation-play-state: running, paused;
+        }
+        
+        #musicPlayer.is-playing .rotating-record {
+            animation-play-state: running;
+        }
+        
+        #musicPlayer.is-playing .lyrics-mini-line.current.lyric-pulse {
+            animation-play-state: running, running;
         }
         
         @keyframes lyricFloatIn {
@@ -732,11 +741,16 @@
             background: linear-gradient(145deg, #4a4a4a 0%, #2f2f2f 55%, #3a3a3a 100%);
             position: relative;
             animation: rotate 8s linear infinite;
+            animation-play-state: paused;
             box-shadow: none;
             cursor: pointer;
             will-change: transform;
             contain: layout style paint;
             flex-shrink: 0;
+            padding: 0;
+            border: none;
+            appearance: none;
+            -webkit-appearance: none;
         }
         
         .rotating-record:hover {
@@ -2415,23 +2429,6 @@
             <a href="{% url 'membership' %}" class="app-nav-link" data-nav="membership">
                 <i class="bi bi-gem"></i> 会员
             </a>
-            <div class="app-sidebar-footer">
-                {% if user.is_authenticated %}
-                <div class="app-nav-link" style="cursor: default;">
-                    <i class="bi bi-person-circle"></i> {{ user.username }}
-                </div>
-                <a href="{% url 'logout' %}" class="app-nav-link">
-                    <i class="bi bi-box-arrow-right"></i> 退出
-                </a>
-                {% else %}
-                <a href="{% url 'login' %}" class="app-nav-link" data-nav="login">
-                    <i class="bi bi-box-arrow-in-right"></i> 登录
-                </a>
-                <a href="{% url 'register' %}" class="app-nav-link" data-nav="register">
-                    <i class="bi bi-person-plus"></i> 注册
-                </a>
-                {% endif %}
-            </div>
             </div>
             </div>
         </aside>
@@ -2490,7 +2487,9 @@
         <!-- 底部控制条：左曲信息 / 中控+进度 / 右工具 -->
         <div class="player-collapsed-view">
             <div class="player-col player-left">
-                <div class="rotating-record" title="当前曲目"></div>
+                <button type="button" class="rotating-record" id="rotatingRecordBtn"
+                        onclick="event.stopPropagation(); togglePlayPause();"
+                        title="播放/暂停" aria-label="播放/暂停"></button>
                 <div class="record-info">
                     <div class="song-title" id="collapsedSongTitle">未选择歌曲</div>
                     <div class="song-artist" id="collapsedSongArtist">--</div>
@@ -3251,6 +3250,16 @@
             if (collapsedBtn) {
                 collapsedBtn.innerHTML = `<i class="bi ${iconClass}"></i>`;
             }
+            const playerShell = document.getElementById('musicPlayer');
+            if (playerShell) {
+                playerShell.classList.toggle('is-playing', !!isPlaying);
+            }
+            const recordBtn = document.getElementById('rotatingRecordBtn');
+            if (recordBtn) {
+                const label = isPlaying ? '暂停' : '播放';
+                recordBtn.title = label;
+                recordBtn.setAttribute('aria-label', label);
+            }
             syncSongTitlePlayStates(isPlaying);
         }
         
@@ -3920,7 +3929,8 @@
             toggleTimerPanel(false);
             player.pause();
             player.src = '';
-            playerDiv.classList.remove('active');
+            playerDiv.classList.remove('active', 'is-playing');
+            updatePlayPauseButtons(false);
             document.body.classList.remove('player-shell-active');
             currentLyrics = [];
             currentSongId = null;
@@ -3991,8 +4001,6 @@
         window.togglePlayerFavorite = togglePlayerFavorite;
         
         async function ensureFavoriteIdsLoaded() {
-            const authenticated = {% if user.is_authenticated %}true{% else %}false{% endif %};
-            if (!authenticated) return;
             if (window._favoriteIdsLoaded) return;
             try {
                 const res = await fetch('/api/favorites/ids/', {
@@ -4011,16 +4019,6 @@
         }
         
         async function toggleFavorite(songId, btn) {
-            const shellAuth = document.querySelector('[data-user-authenticated]');
-            const authenticated = shellAuth
-                ? shellAuth.dataset.userAuthenticated === 'true'
-                : {% if user.is_authenticated %}true{% else %}false{% endif %};
-            if (!authenticated) {
-                if (confirm('收藏需要登录，是否前往登录？')) {
-                    window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname + window.location.search);
-                }
-                return;
-            }
             const csrf = getCookie('csrftoken');
             if (!csrf) {
                 alert('缺少 CSRF，请刷新后重试');
@@ -4039,12 +4037,6 @@
                     body: JSON.stringify({ song_id: songId })
                 });
                 const data = await res.json().catch(() => ({}));
-                if (res.status === 401) {
-                    if (confirm('收藏需要登录，是否前往登录？')) {
-                        window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname + window.location.search);
-                    }
-                    return;
-                }
                 if (!res.ok) throw new Error(data.error || '操作失败');
                 if (data.favorited) {
                     window.favoritedSongIds.add(songId);
@@ -4460,8 +4452,6 @@
             if (path.includes('/favorites')) return 'favorites';
             if (path.includes('/random')) return 'random';
             if (path.includes('/membership')) return 'membership';
-            if (path.includes('/login')) return 'login';
-            if (path.includes('/register')) return 'register';
             if (hash === '#song-list' || hash === '#songs') return 'songs';
             if (path === '/' || path.endsWith('/mayday/') || path.includes('/index') || path === '' ) {
                 if (hash === '#albums') return 'home';
@@ -4610,6 +4600,8 @@
                 } else if (playMode === 'sequential' && currentIndex < playlist.length - 1) {
                     // 顺序播放：如果还有下一首，播放下一首
                     playNext();
+                } else {
+                    updatePlayPauseButtons(false);
                 }
             });
             

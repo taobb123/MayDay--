@@ -38,7 +38,7 @@ urlpatterns = [
     path('api/payments/checkout/', views.payments_checkout_api, name='payments_checkout_api'),
     path('api/payments/webhook/stripe/', views.payments_stripe_webhook, name='payments_stripe_webhook'),
     
-    # 用户认证路由
+    # 旧登录入口保留路由名，视图已改为回首页
     path('login/', views.login_view, name='login'),
     path('register/', views.register_view, name='register'),
     path('logout/', views.logout_view, name='logout'),

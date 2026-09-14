@@ -9,8 +9,8 @@ from django.views.generic import RedirectView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # 重定向 /accounts/login/ 到 /login/
-    path('accounts/login/', RedirectView.as_view(url='/login/', permanent=False, query_string=True)),
+    # 前端已取消登录，Django 默认登录入口回到首页
+    path('accounts/login/', RedirectView.as_view(url='/', permanent=False)),
     path('api/', include('mayday_app.urls')),
     path('', include('mayday_app.urls')),
 ]

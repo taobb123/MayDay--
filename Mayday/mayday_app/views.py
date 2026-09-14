@@ -10,10 +10,8 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth import login, authenticate, logout
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_protect, csrf_exempt
+from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q, Count
 from django.http import FileResponse, Http404, JsonResponse
 import json
@@ -36,14 +34,6 @@ import random
 from django.utils import timezone
 from rest_framework.views import exception_handler as drf_exception_handler
 from rest_framework.exceptions import AuthenticationFailed, PermissionDenied, NotAuthenticated
-
-
-def _safe_next_redirect(request, default='index'):
-    """仅允许站内相对路径回跳，避免开放重定向。"""
-    next_url = request.POST.get('next') or request.GET.get('next') or ''
-    if next_url.startswith('/') and not next_url.startswith('//'):
-        return redirect(next_url)
-    return redirect(default)
 
 
 def _json_login_required(request):
@@ -836,50 +826,20 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-# 用户认证视图
-@csrf_protect
+# 前端已取消登录/注册/退出，旧地址统一回到首页
 def login_view(request):
-    """登录视图"""
-    if request.user.is_authenticated:
-        return _safe_next_redirect(request)
-    error = None
-    if request.method == 'POST':
-        username = request.POST.get('username', '').strip()
-        password = request.POST.get('password', '')
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            return _safe_next_redirect(request)
-        error = '用户名或密码错误'
-    return render(request, 'mayday_app/login.html', {
-        'error': error,
-        'next': request.GET.get('next', ''),
-    })
-
-
-@csrf_protect
-def register_view(request):
-    """注册视图"""
-    if request.user.is_authenticated:
-        return redirect('index')
-    if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect('index')
-    else:
-        form = UserCreationForm()
-    return render(request, 'mayday_app/register.html', {'form': form})
-
-
-def logout_view(request):
-    """登出视图"""
-    logout(request)
     return redirect('index')
 
 
-@login_required(login_url='/login/')
+def register_view(request):
+    return redirect('index')
+
+
+def logout_view(request):
+    return redirect('index')
+
+
+@login_required
 def playlist_list_view(request):
     """歌单列表页面（仅当前用户）"""
     playlists = (
@@ -1140,7 +1100,7 @@ def remove_song_from_playlist_api(request, playlist_id, song_id):
         return JsonResponse({'error': f'移除失败: {str(e)}'}, status=500)
 
 
-@login_required(login_url='/login/')
+@login_required
 def playlist_detail_view(request, playlist_id):
     """歌单详情页面（仅所有者）"""
     playlist = get_object_or_404(Playlist, id=playlist_id, user=request.user)
@@ -1151,7 +1111,7 @@ def playlist_detail_view(request, playlist_id):
     })
 
 
-@login_required(login_url='/login/')
+@login_required
 def membership_view(request):
     """会员骨架页：状态 + 演示升级"""
     from .membership import membership_status_dict
@@ -1224,7 +1184,7 @@ def payments_stripe_webhook(request):
         return JsonResponse({'ok': False, 'error': str(exc)}, status=400)
 
 
-@login_required(login_url='/login/')
+@login_required
 def membership_success_view(request):
     """Stripe 成功回跳：若带 order_id 且已支付则展示；pending 时尝试提示等待 Webhook"""
     from .models import MembershipOrder
@@ -1250,7 +1210,7 @@ def membership_success_view(request):
     })
 
 
-@login_required(login_url='/login/')
+@login_required
 def favorites_view(request):
     """我喜欢的：收藏列表页"""
     favorites = (

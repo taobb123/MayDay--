@@ -992,19 +992,13 @@ function showPlaylistModal(songId) {
             const isJson = contentType.includes('application/json');
             
             if (!response.ok) {
-                if (response.status === 401) {
-                    if (confirm('加入歌单需要登录，是否前往登录？')) {
-                        window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname + window.location.search);
-                    }
-                    throw new Error('请先登录');
-                }
                 // 尝试解析错误信息
                 if (isJson) {
                     try {
                         const errorData = JSON.parse(text);
                         throw new Error(errorData.error || errorData.detail || `HTTP错误: ${response.status}`);
                     } catch (e) {
-                        if (e.message === '请先登录') throw e;
+                        if (e.message && !e.message.startsWith('HTTP错误')) throw e;
                         throw new Error(`HTTP错误: ${response.status}`);
                     }
                 } else {
