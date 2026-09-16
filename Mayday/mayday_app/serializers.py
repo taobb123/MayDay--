@@ -88,7 +88,7 @@ class PlaylistSongSerializer(serializers.ModelSerializer):
 
 class PlaylistSerializer(serializers.ModelSerializer):
     """歌单序列化器"""
-    songs = PlaylistSongSerializer(many=True, read_only=True, source='songs')
+    songs = PlaylistSongSerializer(many=True, read_only=True)
     song_count = serializers.SerializerMethodField()
     user = serializers.StringRelatedField(read_only=True)
     

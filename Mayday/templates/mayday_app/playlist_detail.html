@@ -206,6 +206,7 @@
             </div>
             <div class="modal-body">
                 <form id="playlistForm">
+                    {% csrf_token %}
                     <div class="mb-3">
                         <label for="playlistName" class="form-label">歌单名称</label>
                         <input type="text" class="form-control" id="playlistName" required>
@@ -400,28 +401,60 @@ function savePlaylist() {
     
     if (!name) {
         alert('请输入歌单名称');
+        document.getElementById('playlistName').focus();
         return;
     }
-    
-    fetch(`/api/playlists/${id}/`, {
+    if (name.length > 200) {
+        alert('歌单名称不能超过200个字符');
+        document.getElementById('playlistName').focus();
+        return;
+    }
+    if (!id) {
+        alert('歌单信息缺失，请刷新页面后重试');
+        return;
+    }
+
+    const csrfToken = getCookie('csrftoken');
+    if (!csrfToken) {
+        alert('CSRF token未找到，请刷新页面后重试');
+        return;
+    }
+
+    fetch(`/api/playlists/${id}/update/`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
+            'Accept': 'application/json',
+            'X-CSRFToken': csrfToken
         },
+        credentials: 'same-origin',
         body: JSON.stringify({ name: name })
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            alert(data.error);
-        } else {
-            reloadPagePreservingPlayer();
+    .then(async response => {
+        const text = await response.text();
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            throw new Error(response.status === 403 ? 'CSRF验证失败，请刷新页面后重试' : '保存失败');
         }
+        let jsonData;
+        try {
+            jsonData = JSON.parse(text);
+        } catch (e) {
+            throw new Error('服务器响应格式错误');
+        }
+        if (!response.ok) {
+            throw new Error(jsonData.error || jsonData.message || '保存失败');
+        }
+        return jsonData;
+    })
+    .then(() => {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('playlistModal'));
+        if (modal) modal.hide();
+        reloadPagePreservingPlayer();
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('保存失败');
+        alert(error.message || '保存失败');
     });
 }
 

@@ -32,24 +32,25 @@
     nav[aria-label="歌曲分页"] {
         display: flex;
         justify-content: center;
+        width: 100%;
     }
     .pagination-block {
-        display: inline-flex;
-        flex-direction: column;
-        align-items: stretch;
-        width: max-content;
-        max-width: 100%;
+        display: flex;
+        justify-content: center;
+        width: 100%;
     }
     .pagination-block .pagination {
-        justify-content: flex-start;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
         margin-bottom: 0;
         gap: 6px;
-        flex-wrap: wrap;
-        width: max-content;
-        max-width: 100%;
+        flex-wrap: nowrap;
+        width: auto;
     }
     .pagination .page-item {
         margin: 0;
+        flex-shrink: 0;
     }
     .pagination .page-link {
         padding: 6px 12px;
@@ -62,10 +63,9 @@
     }
     .page-jump-bar {
         display: flex;
-        justify-content: center;
-        margin-bottom: 4px;
-        padding-top: 0;
-        order: -1;
+        align-items: center;
+        margin: 0;
+        padding: 0;
     }
     .page-jump-bar form {
         display: inline-flex;
@@ -79,6 +79,7 @@
         line-height: 1.3;
         min-height: 34px;
         border: 1px solid var(--bg-divider);
+        white-space: nowrap;
     }
     .page-jump-input {
         width: 3.6rem;
@@ -278,7 +279,7 @@ window.favoritedSongIds = new Set([{% for id in favorited_ids %}{{ id }}{% if no
         {% if albums.has_other_pages %}
         <nav aria-label="专辑分页" class="mt-4">
             <div class="pagination-block">
-            <ul class="pagination flex-wrap">
+            <ul class="pagination">
                 {% if albums.has_previous %}
                 <li class="page-item">
                     <a class="page-link" href="?album_page=1{% if songs.number > 1 %}&song_page={{ songs.number }}{% endif %}">&laquo; 首页</a>
@@ -316,16 +317,16 @@ window.favoritedSongIds = new Set([{% for id in favorited_ids %}{{ id }}{% if no
                     <span class="page-link">末页 &raquo;</span>
                 </li>
                 {% endif %}
+                <li class="page-item page-jump-bar">
+                    <form onsubmit="return jumpToPagedList(event, 'album_page', {{ albums.paginator.num_pages }}, {{ songs.number }}, 'albums');">
+                        <label for="albumPageJump" class="visually-hidden">跳至页码</label>
+                        跳至
+                        <input id="albumPageJump" class="page-jump-input" type="number" min="1" max="{{ albums.paginator.num_pages }}" value="{{ albums.number }}" required>
+                        页
+                        <button type="submit" class="page-jump-btn" title="跳转" aria-label="跳转"><i class="bi bi-arrow-right"></i></button>
+                    </form>
+                </li>
             </ul>
-            <div class="page-jump-bar">
-                <form onsubmit="return jumpToPagedList(event, 'album_page', {{ albums.paginator.num_pages }}, {{ songs.number }}, 'albums');">
-                    <label for="albumPageJump" class="visually-hidden">跳至页码</label>
-                    跳至
-                    <input id="albumPageJump" class="page-jump-input" type="number" min="1" max="{{ albums.paginator.num_pages }}" value="{{ albums.number }}" required>
-                    页
-                    <button type="submit" class="page-jump-btn" title="跳转" aria-label="跳转"><i class="bi bi-arrow-right"></i></button>
-                </form>
-            </div>
             </div>
         </nav>
         {% endif %}
@@ -416,7 +417,7 @@ window.favoritedSongIds = new Set([{% for id in favorited_ids %}{{ id }}{% if no
         {% if songs.has_other_pages %}
         <nav aria-label="歌曲分页" class="mt-4">
             <div class="pagination-block">
-            <ul class="pagination flex-wrap">
+            <ul class="pagination">
                 {% if songs.has_previous %}
                 <li class="page-item">
                     <a class="page-link" href="?song_page=1{% if albums.number > 1 %}&album_page={{ albums.number }}{% endif %}">&laquo; 首页</a>
@@ -454,16 +455,16 @@ window.favoritedSongIds = new Set([{% for id in favorited_ids %}{{ id }}{% if no
                     <span class="page-link">末页 &raquo;</span>
                 </li>
                 {% endif %}
+                <li class="page-item page-jump-bar">
+                    <form onsubmit="return jumpToPagedList(event, 'song_page', {{ songs.paginator.num_pages }}, {{ albums.number }}, 'song-list');">
+                        <label for="songPageJump" class="visually-hidden">跳至页码</label>
+                        跳至
+                        <input id="songPageJump" class="page-jump-input" type="number" min="1" max="{{ songs.paginator.num_pages }}" value="{{ songs.number }}" required>
+                        页
+                        <button type="submit" class="page-jump-btn" title="跳转" aria-label="跳转"><i class="bi bi-arrow-right"></i></button>
+                    </form>
+                </li>
             </ul>
-            <div class="page-jump-bar">
-                <form onsubmit="return jumpToPagedList(event, 'song_page', {{ songs.paginator.num_pages }}, {{ albums.number }}, 'song-list');">
-                    <label for="songPageJump" class="visually-hidden">跳至页码</label>
-                    跳至
-                    <input id="songPageJump" class="page-jump-input" type="number" min="1" max="{{ songs.paginator.num_pages }}" value="{{ songs.number }}" required>
-                    页
-                    <button type="submit" class="page-jump-btn" title="跳转" aria-label="跳转"><i class="bi bi-arrow-right"></i></button>
-                </form>
-            </div>
             </div>
         </nav>
         {% endif %}
